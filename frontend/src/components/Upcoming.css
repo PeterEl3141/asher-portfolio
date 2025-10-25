@@ -1,0 +1,66 @@
+/* Spacious section with generous scroll */
+.upcoming-section {
+  position: relative;
+  isolation: isolate;                    /* contain stacking within the section */
+  width: 100%;
+  min-height: 160vh;                     /* nice long scroll */
+  /* split padding to avoid using a margin that would expose the body bg */
+  padding-top: calc(150px + clamp(72px, 10vw, 160px)); /* was margin-top: 150px */
+  padding-right: clamp(20px, 7vw, 80px);
+  padding-bottom: clamp(72px, 10vw, 160px);
+  padding-left: clamp(20px, 7vw, 80px);
+  box-sizing: border-box;
+  overflow: visible;
+  z-index: 1;                            /* paint above previous section */
+  background: var(--upcoming-bg, #ffffff);
+  color: var(--upcoming-fg, #000000);
+  /* no margin-top here; prevents collapsed-margin “black bar” */
+}
+
+/* Massive outline word (same style as PRESS) */
+.upcoming-hero-word {
+  position: absolute;
+  top: 2;
+  left: clamp(20px, 7vw, 80px);
+  transform: none;
+  font-size: clamp(70px, 15vw, 230px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 0.8;
+
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 8px rgba(0, 0, 0, 0.45);
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.15);
+
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+  z-index: -1;                           /* behind this section’s background */
+}
+
+/* Big central container */
+.upcoming-main {
+  position: relative;
+  width: min(56vw, 1200px);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  box-shadow: 0 18px 48px rgba(255, 255, 255, 0.35);
+  margin: clamp(24px, 8vh, 80px) auto 0 auto; /* centered */
+}
+
+.upcoming-main-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: translateZ(0);
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .upcoming-main {
+    width: 100%;
+    border-radius: 14px;
+  }
+}

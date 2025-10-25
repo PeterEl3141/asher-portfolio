@@ -1,0 +1,78 @@
+/* Container */
+.poster-clip {
+    position: relative;
+    isolation: isolate;
+    height: var(--section-h, 120vh); /* use height (not min-height) for vertical centering */
+    margin: 3rem 0;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  
+  /* Brick mosaic background (two layers offset like brickwork) */
+  .poster-clip__bg {
+    --tile-h: calc(var(--tile-w) / var(--ratio, 0.6));
+    position: absolute;
+    inset: 0;
+    background-image: var(--poster), var(--poster);
+    background-size: var(--tile-w) var(--tile-h), var(--tile-w) var(--tile-h);
+    background-position:
+      0 0,
+      calc(var(--tile-w) / 2) calc(var(--tile-h) / 2);
+    background-repeat: repeat, repeat;
+    filter: saturate(0.9) contrast(0.95);
+    opacity: 0.9;
+    pointer-events: none;
+    z-index: 0;
+  }
+  
+  /* Soft vignette so the video reads */
+  .poster-clip__vignette {
+    position: absolute; inset: 0; z-index: 1;
+    background: linear-gradient(135deg, rgba(0,0,0,.45), rgba(0,0,0,.25) 40%, rgba(0,0,0,.55));
+  }
+  
+  /* Center content both ways */
+  .poster-clip__inner {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;     /* horizontal center */
+    justify-content: center; /* vertical center */
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+  
+  /* Video frame */
+  .poster-clip__frame {
+    width: min(78vw, 960px);
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,.15);
+    box-shadow: 0 12px 36px rgba(0,0,0,.45);
+    background: #000; /* avoids flash while loading */
+  }
+  
+  .poster-clip__video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  
+  /* Optional title */
+  .poster-clip__title {
+    margin-top: .25rem;
+    font-size: 0.9rem;
+    letter-spacing: .06em;
+    color: rgba(255,255,255,.8);
+    text-align: center;
+  }
+  
+  /* Responsive tweaks */
+  @media (max-width: 640px) {
+    .poster-clip { margin: 2rem 0; }
+    .poster-clip__frame { width: min(92vw, 720px); }
+  }
+  

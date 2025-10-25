@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+/* your base styles … ideally inside @layer base */
+@layer base {
+  :root {
+    /* Global variables */
+    --bg: #000000;
+    --fg: #e7e7e7;
+
+    /* Root element reset */
+    background-color: #1c1c1c;
+    max-width: none;
+    width: 100%;
+    padding: 0;
+    text-align: inherit;
+  }
+
+  html, body, #root {
+    min-height: 100%;
+  }
+
+  html {
+    background: var(--bg);
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+    background: var(--bg); /* match background */
+    color: var(--fg);
+    display: block;        /* override Vite flex centering */
+  }
+}
+
+@layer utilities {
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+  @keyframes logoPulse { from { background-position: 0 0 } to { background-position: 200% 0 } }
+
+  .animate-marquee { animation: marquee 20s linear infinite; }
+}
+
+@layer components {
+  .brick-poster {
+    /* Controls you can override from the component */
+    --tile-w: 220px;          /* tile width */
+    --ratio: 1.5;             /* height/width (e.g., 3:2 = 1.5, classic poster 2:3 = 1.5, 27×40 ≈ 1.48) */
+    --tile-h: calc(var(--tile-w) * var(--ratio));
+
+    background-image: var(--poster), var(--poster);
+    background-size: var(--tile-w) var(--tile-h);                 /* keeps aspect ratio */
+    background-position:
+      0 0,
+      calc(var(--tile-w) / 2) calc(var(--tile-h) / 2);            /* brick offset */
+    background-repeat: repeat, repeat;
+    filter: saturate(0.95) brightness(0.95);
+  }
+}
+
+
+
+/* --- DROP-IN: prevent horizontal scrolling --- */
+@layer base {
+  /* 1) Kill horizontal overflow globally */
+  html, body, #root {
+    overflow-x: clip;       /* modern browsers */
+    max-width: 100%;
+  }
+  @supports not (overflow-x: clip) {
+    html, body, #root { overflow-x: hidden; }  /* fallback */
+  }
+
+  /* 2) Media should never make the page wider */
+  img, video, canvas, svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  /* 3) Safe viewport width to avoid 100vw scrollbar bleed */
+  :root { --vw: calc(100vw - (100vw - 100%)); }
+}
+
+@layer utilities {
+  /* Use these instead of w-screen / 100vw when you need full-bleed */
+  .w-screen-safe    { width: var(--vw); }
+  .max-w-screen-safe{ max-width: var(--vw); }
+}
+
+
+
+
+
+
+
+@layer utilities {
+  @keyframes ring-fill { to { stroke-dashoffset: 0 } }
+  .progress-ring { animation: ring-fill var(--duration,3000ms) linear forwards; }
+}

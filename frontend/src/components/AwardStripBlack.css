@@ -1,0 +1,24 @@
+.film-awards-black{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    min-height: 70vh;
+    background-color: black;
+    top: 100px;
+    padding-top: 250px;
+    padding-bottom: 300px;
+}
+
+.award-black {
+    height: clamp(60px, 10vw, 160px); 
+    width: auto;                     
+    object-fit: contain;              
+    flex: 0 0 auto;                 
+    opacity: 0.9;                     
+    transition: transform 150ms ease, opacity 150ms ease;
+  }
+  
+  .award-black:hover {
+    transform: translateY(-2px) scale(1.02);
+    opacity: 1;
+  }

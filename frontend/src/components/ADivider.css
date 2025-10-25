@@ -1,0 +1,26 @@
+/* src/components/ADivider.css */
+.a-divider {
+    width: 100%;
+    height: var(--a-h, 96px);
+    background-image: var(--a-img);
+    background-repeat: repeat-x;
+    background-position: left center; /* start at the left edge */
+    background-size: auto 100%;       /* keep image aspect; scale to full height */
+    pointer-events: none;              /* decorative */
+  }
+  
+
+  .a-divider--marquee {
+    --speed: 30s;              /* tweak me */
+    animation: a-pan var(--speed) linear infinite;
+  }
+  @keyframes a-pan {
+    from { background-position: 0% 50%; }
+    to   { background-position: 100% 50%; }
+  }
+  
+  /* motion-safe */
+  @media (prefers-reduced-motion: reduce) {
+    .a-divider--marquee { animation: none; }
+  }
+  

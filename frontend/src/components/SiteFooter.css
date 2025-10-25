@@ -1,0 +1,67 @@
+/* Root */
+.site-footer {
+    background-color: #ffffff; /* flipped from black */
+    color: #000000;            /* flipped from neutral-400 to black */
+    padding: 2.5rem 0;         /* ~py-10 */
+  }
+  
+  /* Layout */
+  .footer-container {
+    max-width: 64rem;          /* ~max-w-5xl */
+    margin: 0 auto;
+    padding: 0 1rem;           /* ~px-4 */
+    text-align: center;
+  }
+  
+  /* Icons row */
+  .footer-icons {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;               /* ~gap-6 */
+    margin-bottom: 1.5rem;     /* space between icons and copyright */
+  }
+  
+  .footer-icon {
+    display: inline-block;     /* inline-block */
+    width: 24px;               /* h-6 w-6 */
+    height: 24px;
+  }
+  
+  /* SVG inherits current color from link */
+  .footer-icon svg {
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+  }
+  
+  /* Links (all black, subtle hover/focus states) */
+  .social-link {
+    color: #000000;
+    text-decoration: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  
+  .social-link:hover {
+    opacity: 0.75;             /* subtle feedback instead of color swap */
+    transform: translateY(-1px);
+  }
+  
+  .social-link:focus-visible {
+    outline: 2px dotted #000;
+    outline-offset: 3px;
+  }
+  
+  /* Copy */
+  .footer-copy {
+    font-size: 0.875rem;       /* text-sm */
+    line-height: 1.5;
+    color: #000000;
+  }
+  
+  /* Optional: respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .social-link {
+      transition: none;
+    }
+  }
+  

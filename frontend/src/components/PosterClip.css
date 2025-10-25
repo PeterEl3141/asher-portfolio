@@ -1,0 +1,52 @@
+/* Root container */
+.posterclip {
+    width: 100%;
+    /* adjustable space between poster and video */
+    --posterclip-gap: 72px; /* default if not set inline */
+  }
+  
+  /* Poster: full-bleed edge-to-edge */
+  .posterclip__posterWrap {
+    width: 100vw;              /* truly span the viewport width */
+    margin-left: 50%;
+    transform: translateX(-50%); /* escape parent padding and center */
+  }
+  
+  .posterclip__poster {
+    display: block;  /* remove inline-img gap */
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+  
+  /* The neutral gap below the poster (uses page background) */
+  .posterclip__gap {
+    height: var(--posterclip-gap);
+  }
+  
+  /* Video wrapper: keep it aligned with page content width if desired.
+     If you want the video also full-bleed, set width:100vw like the poster. */
+  .posterclip__videoWrap {
+    width: min(1200px, 92vw);
+    margin: 0 auto;
+  }
+  
+  .posterclip__video {
+    display: block;
+    width: 100%;
+    height: auto;
+    outline: none;
+    border: none;
+  }
+
+  .posterclip + .posterclip {
+    margin-top: 80px; /* tweak to taste */
+  }
+  
+  /* Optional: respect device safe areas for truly edge-to-edge poster on mobile */
+  @supports (padding: max(0px)) {
+    .posterclip__posterWrap {
+      /* No extra padding/offsets here; page background will show in the gap */
+    }
+  }
+  

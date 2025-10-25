@@ -1,0 +1,256 @@
+/* ===============================
+   VideoPlayer — consolidated CSS
+   (row-of-9 layout, crisp pixel bands)
+   =============================== */
+
+/* ------ knobs ------ */
+:root {
+  --band-gap: 50px;             /* gap between ALL neighbors (also stage↔pillars) */
+  --band-width: 24px;           /* width of each pillar */
+  --stage-height: 68vh;         /* maximum video height */
+  --fold-duration: 900ms;       /* how long corridor squeeze runs */
+  --fold-ease: cubic-bezier(.22,1,.36,1);
+  --fin-clearance: 200px;        /* vertical space reserved for the fin */
+}
+
+/* reset that often creates a left gutter */
+html, body { height: 100%; }
+body { margin: 0; }
+
+/* section */
+.vp-root {
+  position: relative;
+  width: 100vw;                 /* full-bleed */
+  height: 100vh;                /* one viewport tall */
+  padding-top: var(--fin-clearance);
+  background: #fff;
+  color: #000;
+  overflow: visible;            /* let the fin overlay be seen */
+}
+
+/* fin sits above, does not affect layout */
+.fin-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 0;
+  z-index: 200;
+  pointer-events: none;
+}
+
+/* the part that clips the stage/clone */
+.vp-stage-wrap {
+  position: relative;
+  height: calc(100% - 0px);
+  overflow: hidden;
+}
+
+/* row of sections */
+.vp-row--fixed {
+  display: flex;
+  align-items: stretch;
+  height: 100%;
+  gap: var(--band-gap);
+  padding: 0;                   /* flush to viewport edges */
+}
+
+/* stop cascades while morphing */
+.vp-row--fixed.is-lock .vp-cell--band { pointer-events: none; }
+
+/* base tile */
+.vp-cell {
+  position: relative;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  background: #fff;
+  cursor: pointer;
+  transition: flex-basis var(--fold-duration) var(--fold-ease), opacity 160ms ease;
+}
+
+/* pillars: truly fixed width */
+.vp-cell--band {
+  flex: 0 0 var(--band-width);
+  min-width: var(--band-width);
+  max-width: var(--band-width);
+}
+
+/* player: takes the remainder (keeps pillars glued to edges) */
+.vp-cell--player {
+  flex: 1 1 auto;
+  min-width: 0;
+  cursor: default;
+}
+
+/* center “dumbbell” shell */
+.vp-active-shell {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+/* video sizing:
+   JS sets a concrete height (px) after metadata; these keep it ratio-correct
+*/
+.vp-cell--player .vp-video {
+  display: block;
+  width: auto;
+  height: auto;                /* JS will assign explicit px height */
+  max-height: var(--stage-height);
+  object-fit: contain;         /* safety; but height is driven by JS */
+  background: transparent;
+  margin: 0 auto;              /* center when narrower than stage */
+}
+
+/* title bug */
+.vp-bug {
+  position: absolute;
+  left: 1rem;
+  bottom: 0.75rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(0,0,0,.45);
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  color: #fff;
+}
+
+/* pixelated pillar image (JS injects a dataURL); no blur, no transforms */
+.vp-pixel {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: saturate(.96) brightness(.92);
+}
+.vp-cell--band:hover .vp-pixel { filter: saturate(1) brightness(1); }
+
+/* “corridor” tiles compress to form the opening path — others don’t move */
+.vp-cell--corridor {
+  transition: flex-basis var(--fold-duration) var(--fold-ease);
+  flex-basis: 6px; min-width: 6px; max-width: 6px;
+}
+
+/* clone poster overlay used for the slide-in */
+.vp-clone {
+  position: fixed;
+  z-index: 40;
+  display: none;
+  top: 0; left: 0; width: 0; height: 0;
+  background-size: cover;
+  background-position: center;
+  pointer-events: none;
+  will-change: top, left, width, height, opacity, transform;
+}
+
+/* quick stage fade utility (kept from your file) */
+.vp-stage-fade-in { animation: vp-stage-fade 140ms ease-out both; }
+@keyframes vp-stage-fade { from { opacity: 0 } to { opacity: 1 } }
+
+/* optional: smoother pillar swap at the end of the morph */
+.vp-fade-out { opacity: 0; transition: opacity var(--fold-duration) var(--fold-ease); }
+.vp-fade-in  { opacity: 1; transition: opacity var(--fold-duration) var(--fold-ease); }
+
+/* empty state */
+.vp-empty {
+  width: 100%;
+  height: 60vh;
+  display: grid;
+  place-items: center;
+  background: #000;
+  color: #aaa;
+}
+
+
+
+
+
+/* ensure the stage area clips the sliding/scale nicely */
+.vp-active-shell { position: relative; overflow: hidden; }
+
+/* overlays animate inside the stage wrap */
+.vp-fly-in,
+.vp-fly-out {
+  position: absolute;   /* inside .vp-stage-wrap */
+  z-index: 60;
+  display: none;
+  left: 0; top: 0; width: 0; height: 0;
+  pointer-events: none;
+  will-change: left, top, width, height, transform, opacity;
+}
+.vp-fly-out {
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* the animated video should cover its box during the slide */
+.vp-fly-in > video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform-origin: 50% 50%;
+}
+
+
+
+
+/* Make sure the stage shell is a stable container */
+.vp-active-shell {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none; /* rails get the hover, not the video */
+}
+
+/* Any video we adopt into the shell uses natural aspect; height set by JS */
+.vp-video {
+  display: block;
+  width: auto;
+  height: auto;           /* JS will write a px height based on aspect */
+  object-fit: contain;
+  background: transparent;
+}
+
+/* Overlay wrappers for slide-in/out */
+.vp-fly-in,
+.vp-fly-out {
+  position: fixed;   /* or absolute inside section if you prefer */
+  z-index: 60;
+  display: none;
+  left: 0; top: 0; width: 0; height: 0;
+  pointer-events: none;
+  will-change: left, top, width, height, opacity, transform;
+}
+.vp-fly-out {
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

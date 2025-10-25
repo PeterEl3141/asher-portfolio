@@ -1,0 +1,112 @@
+/* Profile.css — centered image with text beneath (same width) */
+
+/* Tweakable sizing vars */
+.profile {
+  --img-w: min(50vw, 1000px);   /* shared width for image & text */
+  --text-w: var(--img-w);
+  --bottom-gap: clamp(150px, 16vh, 240px); /* ensure at least 100px below */
+}
+
+/* Center the block and stack children */
+.profile {
+  position: relative;
+  display: grid;
+  justify-items: center;         /* center the column */
+  align-items: start;
+  gap: 1.75rem;                  /* a touch more space between image and text */
+  min-height: 100vh;              /* taller overall so the section feels substantial */
+  margin-block-start: clamp(8rem, 12vh, 18rem); /* use vh for vertical spacing */
+  margin-block-end: var(--bottom-gap);          /* guaranteed gap below */
+  padding-top: -50px;
+}
+
+/* Image block */
+.profile-left { width: var(--img-w); }
+.profile-left img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+/* Text block sits under image */
+.profile-right {
+  position: static;
+  width: var(--text-w);
+  line-height: 1.6;
+  color: var(--fg, #fff);
+  text-align: justify;
+  text-justify: inter-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  -ms-hyphens: auto;
+  padding-left: 0;
+  margin: 0;
+}
+
+/* Paragraph spacing */
+.profile-right p { margin: 0 0 1rem; }
+.profile-right p:last-child { margin-bottom: 0; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .profile {
+    min-height: unset;
+    gap: 1rem;
+    margin-block-start: 4rem;
+    margin-block-end: var(--bottom-gap);
+  }
+  .profile-left,
+  .profile-right {
+    width: min(92vw, 560px);
+  }
+  .profile-right {
+    text-align: left;
+    text-justify: auto;
+  }
+}
+
+/* --- Unfurl effect --- */
+.text-reveal {
+  --reveal-dur: 3800ms;
+  --reveal-delay: 1400ms; 
+  clip-path: inset(0 100% 0 0);
+  will-change: clip-path, transform, filter;
+  transition:
+    clip-path var(--reveal-dur) cubic-bezier(.22,.9,.24,1),
+    transform var(--reveal-dur) ease-out,
+    filter var(--reveal-dur) ease-out;
+  transform: translateX(-8px);
+  filter: blur(2px);
+  position: relative;
+  overflow: visible;
+}
+
+.profile.is-inview .text-reveal {
+  clip-path: inset(0 0 0 0);
+  transform: none;
+  filter: none;
+}
+
+/* Paragraph stagger */
+.profile .text-reveal > p {
+  opacity: 0;
+  transform: translateX(6px);
+  transition: opacity 420ms ease, transform 420ms ease;
+}
+.profile.is-inview .text-reveal > p { opacity: 1; transform: none; }
+.profile.is-inview .text-reveal > p:nth-child(1) { transition-delay: 120ms; }
+.profile.is-inview .text-reveal > p:nth-child(2) { transition-delay: 220ms; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .text-reveal,
+  .profile .text-reveal > p {
+    transition: none !important;
+    clip-path: inset(0 0 0 0) !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
+}

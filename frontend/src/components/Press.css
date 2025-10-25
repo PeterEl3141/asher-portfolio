@@ -1,0 +1,155 @@
+/* Root section */
+.press-section {
+  position: relative;
+  isolation: isolate;                 /* contain stacking within the section */
+  width: 100%;
+  min-height: 120vh;
+  /* replace vertical margin spacing with padding so the gap stays white */
+  padding: clamp(64px, 8vw, 128px) clamp(16px, 6vw, 64px);
+  padding-top: 300px;
+  padding-bottom: 180px;              /* was margin-bottom */
+  box-sizing: border-box;
+  overflow: hidden;                   /* keep Press visuals inside */
+  background: var(--press-bg, #ffffff);
+  color: var(--press-fg, #000000);
+}
+
+/* Massive background word */
+.press-hero-word {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: clamp(120px, 28vw, 250px);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 0.8;
+
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 8px rgba(0, 0, 0, 0.5);
+
+  text-shadow: none;
+  white-space: nowrap;
+  user-select: none;
+  pointer-events: none;
+  z-index: -1;                        /* sits behind this section’s content */
+}
+
+/* Main content: big div + right meta */
+.press-content {
+  display: grid;
+  grid-template-columns: minmax(280px, 50vw) minmax(220px, 1fr);
+  gap: clamp(16px, 3vw, 48px);
+  align-items: start;
+  justify-content: center;
+  margin: 0 auto clamp(24px, 5vh, 56px);
+  max-width: 1400px;
+  position: relative;
+  z-index: 1;                         /* above the hero word (scoped here) */
+}
+
+/* Big central container */
+.press-main {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+}
+
+.press-main-link {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.press-main-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transform: translateZ(0);
+}
+
+/* Hover overlay on big div */
+.press-main-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  opacity: 0;
+  background: rgba(0,0,0,0.35);
+  color: #ffffff;
+  transition: opacity 180ms ease;
+}
+
+.press-main:hover .press-main-overlay {
+  opacity: 1;
+}
+
+/* Right meta */
+.press-meta {
+  padding-top: 6px;
+  display: grid;
+  grid-template-rows: min-content 1fr;
+  align-items: start;
+}
+
+.press-title {
+  margin: 0 0 16px 0;
+  font-size: clamp(18px, 2.2vw, 28px);
+  font-weight: 800;
+}
+
+.press-excerpt {
+  margin: 0;
+  line-height: 1.6;
+  opacity: 0.9;
+  font-size: clamp(14px, 1.2vw, 18px);
+}
+
+/* Thumbnails row */
+.press-thumbs {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(80px, 1fr);
+  gap: clamp(10px, 1.6vw, 18px);
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.press-thumb {
+  position: relative;
+  border: none;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  overflow: hidden;
+  aspect-ratio: 16 / 10;
+}
+
+.press-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: filter 200ms ease, transform 200ms ease, opacity 200ms ease;
+  z-index: 5;
+}
+
+.press-thumb.is-inactive img { filter: blur(2.5px) grayscale(35%); opacity: 0.75; }
+.press-thumb.is-active img { filter: none; opacity: 1; }
+.press-thumb.is-inactive:hover img { transform: scale(1.04); opacity: 0.9; }
+
+/* Responsive: stack on small screens */
+@media (max-width: 980px) {
+  .press-content { grid-template-columns: 1fr; }
+  .press-meta { order: 2; }
+}

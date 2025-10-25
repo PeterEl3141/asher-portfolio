@@ -1,0 +1,48 @@
+/* Container that provides just enough scroll distance for the melt */
+.hero-divider {
+    position: relative;
+    height: var(--divider-bleed, 200px);
+    /* The strip is the exact same color as the next section,
+       so the fins appear to melt into it. You usually want this
+       background to equal Profile's bg. If you use CSS variables, you're set. */
+    background: var(--bg, #000);
+    overflow: visible;
+    z-index: 10;
+  }
+  
+  /* The pinned wrapper sits on top of the video during the melt */
+  .hero-divider__pin {
+    position: relative;
+    width: 100%;
+    pointer-events: none;
+  }
+  
+  /* The rising mask that reveals the moving fins */
+  .hero-divider__mask {
+    position: relative;
+    width: 100%;
+    height: 0; /* animated via GSAP */
+    overflow: hidden;
+  }
+  
+  /* The moving rail of fins */
+  .hero-divider__rail {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: flex-end;
+    will-change: transform;
+  }
+  
+  /* Individual fin images */
+  .hero-divider__fin {
+    user-select: none;
+    flex: 0 0 auto;
+    height: var(--fin-strip-height, 200px);
+    width: auto;
+    /* Crisp edges for high-contrast shapes */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  

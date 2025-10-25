@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.vercel/
+.env*
+# media
+public/clips/
+*.mp4
+*.mov
+*.mkv
+*.avi

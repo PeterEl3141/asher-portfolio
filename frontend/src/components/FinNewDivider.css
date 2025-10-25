@@ -1,0 +1,28 @@
+/* Only one overlay element. JS switches between fixed and absolute.
+   We keep overflow visible so tall fins aren't cropped by band height. */
+
+   .finpxd__overlay {
+    width: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+  
+  .finpxd__baseline {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 2px;
+    background: var(--bg);
+  }
+  
+  /* Fin images (sized by width; aspect preserved) */
+  .finpxd__img {
+    position: absolute;
+    bottom: 0;
+    height: auto;
+    transform-origin: bottom center;
+    will-change: transform;
+    user-select: none;
+    -webkit-user-drag: none;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  

@@ -1,0 +1,47 @@
+.fin-divider {
+    position: sticky;         /* normal flow unless mounted absolutely */
+    width: 100%;
+    overflow: hidden;           /* trim left/right edges */
+    line-height: 0;             /* no image baseline gaps */
+    pointer-events: none;  
+    z-index: 80;
+  }
+  
+  .fin-divider--abs {
+    position: absolute;         /* classic "mount" behavior */
+    left: 0;
+    right: 0;
+    z-index: 5;
+  }
+  
+  /* Track holds one (static) or two (scrolling) strips */
+  .fin-divider__track {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    will-change: transform;
+  }
+  
+  /* Optional seamless carousel */
+  .fin-divider__track.is-scrolling {
+    animation: fin-scroll var(--fin-duration, 20s) linear infinite;
+  }
+  
+  /* Translate by -50% when we rendered two identical strips -> seamless loop */
+  @keyframes fin-scroll {
+    0%   { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-50%, 0, 0); }
+  }
+  
+  .fin-divider__strip {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;      /* keeps fin bases aligned */
+  }
+  
+  .fin-divider__tile {
+    display: block;
+    flex: 0 0 auto;
+    user-select: none;
+  }
+  

@@ -1,0 +1,95 @@
+/* Fixed overlay used during the melt */
+.finpxd__overlay {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    /* IMPORTANT: let tall fins show fully (no "invisible horizontal line") */
+    overflow: visible;
+    pointer-events: none;
+    z-index: 2147483647;
+  }
+  
+  .finpxd__static {
+    position: absolute;   /* <— bottom-anchored inside containerSelector */
+    left: 0; right: 0; bottom: 0;
+    width: 100%;
+    overflow: visible;
+    pointer-events: none;
+    z-index: 1;
+  }
+  
+/* tiny weld to avoid a 1px seam at the base */
+.finpxd__baseline {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: var(--bg, #000);
+}
+  
+  /* Fin image: bottom-anchored; width controls size (vw/px), height follows aspect */
+  .finpxd__img {
+    position: absolute;
+    bottom: 0;
+    height: auto;
+    transform-origin: bottom center;
+    user-select: none;
+    -webkit-user-drag: none;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  
+
+  /* The element we pin. Height 1px; pinSpacing from ScrollTrigger creates the scroll room. */
+.fpd-stage {
+  position: relative;
+  height: 1px;
+}
+
+/* We add this to the hero while the sequence runs to keep it visually steady. */
+.fpd-hero--pinned {
+  will-change: transform;         /* helps Chrome not blur video while pinned */
+}
+
+/* Overlay: fixed to viewport bottom, above everything. */
+.fpd-overlay {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;                      /* fins rise from the bottom edge */
+  height: var(--fpd-strip-h, 220px);
+  pointer-events: none;
+  z-index: 2147483646;
+  display: none;                  /* shown/hidden by GSAP for zero “flash” */
+}
+
+/* The moving container we sweep upward in phase 2 */
+.fpd-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  will-change: transform;
+}
+
+/* Each fin image */
+.fpd-fin {
+  position: absolute;
+  bottom: 0;
+  height: 100%;                   /* keep aspect; width set inline (vw) */
+  width: auto;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+
+
+
+
+
+
+
+

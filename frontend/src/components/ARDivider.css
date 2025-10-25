@@ -1,0 +1,67 @@
+/* Base container */
+.ar-divider {
+    position: relative;
+    z-index: 40;
+    width: 100%;
+    height: var(--ar-h, 30);
+    pointer-events: none;
+    isolation: isolate;
+  }
+  
+  /* Overlap so the seam is at the divider’s middle */
+  .ar-divider--seam {
+    margin-top:    calc(var(--ar-h, 96px) * -0.5 + var(--seam-nudge, 0px));
+    margin-bottom: calc(var(--ar-h, 96px) * -0.5 - var(--seam-nudge, 0px));
+    pointer-events: none;
+    position: relative;
+    z-index: 2;
+  }
+  
+  /* Set vertical alignment ONCE; animate only X */
+  .ar-divider::before,
+  .ar-divider::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-repeat: repeat-x;
+    background-size: auto 100%;
+    /* set Y with the offset */
+    background-position: 0 calc(50% + var(--dash-offset, 0px));
+    /* also set the longhands for safety across engines */
+    background-position-y: calc(50% + var(--dash-offset, 0px));
+  }
+  
+  /* A: left -> right */
+  .ar-divider::before {
+    background-image: var(--a-img);
+    animation: ar-pan-right-x var(--speed-a, 32s) linear infinite;
+  }
+  
+  /* R: right -> left */
+  .ar-divider::after {
+    background-image: var(--r-img);
+    animation: ar-pan-left-x var(--speed-r, 24s) linear infinite;
+  }
+  
+  /* Animate ONLY the X axis so Y never resets */
+  @keyframes ar-pan-right-x {
+    from { background-position-x:   0%; }
+    to   { background-position-x: 100%; }
+  }
+  @keyframes ar-pan-left-x {
+    from { background-position-x:   0%; }
+    to   { background-position-x: -100%; }
+  }
+  
+  /* Optional blend where they overlap */
+  .ar-divider--blend::after {
+    mix-blend-mode: multiply; /* or: screen | overlay | multiply */
+    opacity: .9;
+  }
+  
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .ar-divider::before,
+    .ar-divider::after { animation: none !important; }
+  }
+  
