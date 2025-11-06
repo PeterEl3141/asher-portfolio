@@ -28,7 +28,7 @@ const Profile = () => {
 
     // SAFETY: if the observer never fires for any reason (layout, browser quirks),
     // auto-reveal after 2.2s.
-    const safetyTimer = setTimeout(reveal, 14000);
+    const safetyTimer = setTimeout(reveal, 25000);
 
     // Create the observer after layout paints
     rafId = requestAnimationFrame(() => {

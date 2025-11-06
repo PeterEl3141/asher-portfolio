@@ -41,7 +41,7 @@ export default function Upcoming() {
       {/* Big central visual */}
       <div className="upcoming-main">
         <img
-          src="/images/trailer.png"
+          src="/images/florence.png"
           alt="Upcoming — trailer artwork"
           className="upcoming-main-img"
         />

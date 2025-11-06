@@ -244,6 +244,14 @@ body { margin: 0; }
 
 
 
+.vp-row--fixed .vp-cell--band {
+  /* fallback 12px, adjust if your current width differs */
+  width: var(--vp-band-w, 12px);
+  flex: 0 0 var(--vp-band-w, 12px);
+}
+
+
+
 
 
 

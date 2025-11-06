@@ -1,6 +1,7 @@
 .film-awards-black{
     display: flex;
-    justify-content: space-around;
+    justify-content: center;
+    gap: 5rem;
     align-items: center;
     min-height: 70vh;
     background-color: black;
@@ -18,7 +19,4 @@
     transition: transform 150ms ease, opacity 150ms ease;
   }
   
-  .award-black:hover {
-    transform: translateY(-2px) scale(1.02);
-    opacity: 1;
-  }
+ 

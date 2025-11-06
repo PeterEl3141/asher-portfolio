@@ -12,8 +12,10 @@
   box-sizing: border-box;
   overflow: visible;
   z-index: 1;                            /* paint above previous section */
-  background: var(--upcoming-bg, #ffffff);
+  background: black;
   color: var(--upcoming-fg, #000000);
+  font-family: Gruppo;
+
   /* no margin-top here; prevents collapsed-margin “black bar” */
 }
 
@@ -30,8 +32,8 @@
 
   color: transparent;
   -webkit-text-fill-color: transparent;
-  -webkit-text-stroke: 8px rgba(0, 0, 0, 0.45);
-  text-shadow: 0 0 18px rgba(255, 255, 255, 0.15);
+  -webkit-text-stroke: 8px rgba(107, 107, 107, 0.5);
+
 
   white-space: nowrap;
   user-select: none;
@@ -42,10 +44,9 @@
 /* Big central container */
 .upcoming-main {
   position: relative;
-  width: min(56vw, 1200px);
+  width: min(70vw, 1200px);
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  box-shadow: 0 18px 48px rgba(255, 255, 255, 0.35);
   margin: clamp(24px, 8vh, 80px) auto 0 auto; /* centered */
 }
 

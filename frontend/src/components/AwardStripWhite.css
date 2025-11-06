@@ -16,7 +16,8 @@
     display: flex;
     gap: clamp(24px, 6vw, 80px);
     align-items: center;
-    justify-content: space-around;
+    justify-content: center;
+    gap: 5rem;
     width: 100%;
   }
   
@@ -28,8 +29,3 @@
     opacity: 0.9;
     transition: transform 150ms ease, opacity 150ms ease;
   }
-  .award-white:hover {
-    transform: translateY(-2px) scale(1.02);
-    opacity: 1;
-  }
-  

@@ -1,7 +1,7 @@
 /* Root */
 .site-footer {
-    background-color: #ffffff; /* flipped from black */
-    color: #000000;            /* flipped from neutral-400 to black */
+    background-color: black; /* flipped from black */
+    color: white;            /* flipped from neutral-400 to black */
     padding: 2.5rem 0;         /* ~py-10 */
   }
   
@@ -36,7 +36,7 @@
   
   /* Links (all black, subtle hover/focus states) */
   .social-link {
-    color: #000000;
+    color: white;
     text-decoration: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
   }
@@ -47,7 +47,7 @@
   }
   
   .social-link:focus-visible {
-    outline: 2px dotted #000;
+    outline: 2px dotted white;
     outline-offset: 3px;
   }
   
@@ -55,7 +55,7 @@
   .footer-copy {
     font-size: 0.875rem;       /* text-sm */
     line-height: 1.5;
-    color: #000000;
+    color: white;
   }
   
   /* Optional: respect reduced motion */

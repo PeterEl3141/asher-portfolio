@@ -4,9 +4,6 @@ import HLSVideo from "../components/HLSVideo";
 export default function HeroVideo({
   delayMs = 5000,
   maxExtraWaitMs = 4000,
-  // Gradual fade controls:
-  fadeStartRatio = 0.98,  // begin fade once below this ratio
-  fadeEndRatio   = 0.60,  // fully black by this ratio
 }) {
   const wrapRef = useRef(null);
 
@@ -16,11 +13,6 @@ export default function HeroVideo({
   const [minDelayDone, setMinDelayDone] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
-
-  // Intersection state
-  const [ratio, setRatio] = useState(1);
-  const [armed, setArmed] = useState(false);     // only fade after we've been fully visible once
-  const [maxRatio, setMaxRatio] = useState(0);   // best ratio seen since reveal
 
   // 5s title card + fail-safe
   useEffect(() => {
@@ -42,52 +34,10 @@ export default function HeroVideo({
 
   const showVideo = minDelayDone && (videoReady || timedOut);
 
-  // Observe intersection ratio
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const thresholds = Array.from({ length: 101 }, (_, i) => i / 100);
-    const io = new IntersectionObserver(([entry]) => {
-      const r = entry?.intersectionRatio ?? 0;
-      setRatio(r);
-    }, { threshold: thresholds });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-
-  // Arm fading only after reveal AND after we've been (almost) fully visible once
-  useEffect(() => {
-    if (!showVideo) {
-      setArmed(false);
-      setMaxRatio(0);
-      return;
-    }
-    setMaxRatio((m) => Math.max(m, ratio));
-    const armAt = Math.min(fadeStartRatio, 0.995); // be tolerant of top-of-page quirks
-    if (ratio >= armAt || maxRatio >= armAt) setArmed(true);
-  }, [showVideo, ratio, fadeStartRatio, maxRatio]);
-
-  // Map current ratio to fade amount (0..1), but only after armed
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-  const startR = Math.max(0, Math.min(1, maxRatio || fadeStartRatio, fadeStartRatio));
-  let fadeT = 0;
-  if (showVideo && armed) {
-    if (ratio >= startR) fadeT = 0;
-    else if (ratio <= fadeEndRatio) fadeT = 1;
-    else fadeT = (startR - ratio) / (startR - fadeEndRatio);
-    fadeT = clamp01(fadeT);
-  }
-
-  // Opacities
-  const sectionBlackOpacity = showVideo ? fadeT : 0; // covers whole section (incl. fin dock)
-  const titleCardOpacity    = showVideo ? 0 : 1;     // inner overlay during initial delay
-  const logoOpacity         = showVideo ? (1 - fadeT) : 1;
-
   // Transitions
-  const scrollFadeMs = 140;  // small; smooth while scrolling
-  const revealFadeMs = 700;  // title-card fade
+  const revealFadeMs = 700;  // title-card fade only (no scroll fading)
 
-  // Ring geometry
+  // Ring geometry (unchanged)
   const R = 48;
   const C = 2 * Math.PI * R;
 
@@ -121,11 +71,11 @@ export default function HeroVideo({
         <div
           className="absolute inset-0 bg-black flex items-center justify-center"
           style={{
-            opacity: titleCardOpacity,
+            opacity: showVideo ? 0 : 1,
             transition: `opacity ${revealFadeMs}ms linear`,
-            pointerEvents: titleCardOpacity > 0.02 ? "auto" : "none",
+            pointerEvents: showVideo ? "none" : "auto",
           }}
-          aria-hidden={titleCardOpacity === 0}
+          aria-hidden={showVideo}
         >
           {!showVideo && (
             <svg
@@ -134,16 +84,16 @@ export default function HeroVideo({
               aria-hidden="true"
               style={{ "--duration": `${delayMs}ms` }}
             >
-              <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="2.5" />
+              <circle cx="60" cy="60" r={R} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
               <circle
-                cx="60" cy="60" r={R} fill="none" stroke="white" strokeWidth="3.5"
+                cx="60" cy="60" r={R} fill="none" stroke="white" strokeWidth="0.5"
                 strokeDasharray={C} strokeDashoffset={C} className="progress-ring"
               />
             </svg>
           )}
         </div>
 
-        {/* Logo fades proportionally when leaving */}
+        {/* Logo (constant opacity; no scroll-based fading) */}
         <img
           src="/images/AR.png"
           alt="Director Logo"
@@ -151,24 +101,10 @@ export default function HeroVideo({
                      w-[28vw] max-w-[460px] h-auto
                      mix-blend-difference pointer-events-none
                      [filter:contrast(1.4)_saturate(2)_drop-shadow(0_8px_32px_rgba(255,255,255,0.25))]"
-          style={{
-            opacity: logoOpacity,
-            transition: `opacity ${scrollFadeMs}ms linear`,
-          }}
-          aria-hidden={logoOpacity === 0}
+          style={{ opacity: 1 }}
+          aria-hidden={false}
         />
       </div>
-
-      {/* Section-wide overlay (covers EVERYTHING, incl. fin dock).
-          Invisible until we've revealed AND been fully visible once. */}
-      <div
-        className="absolute inset-0 bg-black pointer-events-none z-20"
-        style={{
-          opacity: sectionBlackOpacity,
-          transition: `opacity ${scrollFadeMs}ms linear`,
-        }}
-        aria-hidden={sectionBlackOpacity === 0}
-      />
 
       {/* Fin dock (unchanged) */}
       <div

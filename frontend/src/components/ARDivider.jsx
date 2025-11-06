@@ -4,8 +4,8 @@ import "./ARDivider.css";
 const publicUrl = (p) => `${import.meta.env.BASE_URL}${p.replace(/^\/+/, "")}`;
 
 export default function ARDivider({
-  aSrc = "/images/a-black.png",
-  rSrc = "/images/r-black.png",
+  aSrc = "/images/A.png",
+  rSrc = "/images/R.png",
   height = "5px",
   speedA = "20s",
   speedR = "20s",

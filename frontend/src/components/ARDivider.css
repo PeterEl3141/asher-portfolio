@@ -55,7 +55,7 @@
   
   /* Optional blend where they overlap */
   .ar-divider--blend::after {
-    mix-blend-mode: multiply; /* or: screen | overlay | multiply */
+    mix-blend-mode: difference; /* or: screen | overlay | multiply */
     opacity: .9;
   }
   

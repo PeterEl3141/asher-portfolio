@@ -2,7 +2,7 @@
 
 /* Tweakable sizing vars */
 .profile {
-  --img-w: min(50vw, 1000px);   /* shared width for image & text */
+  --img-w: min(45vw, 1000px);   /* shared width for image & text */
   --text-w: var(--img-w);
   --bottom-gap: clamp(150px, 16vh, 240px); /* ensure at least 100px below */
 }
@@ -17,7 +17,7 @@
   min-height: 100vh;              /* taller overall so the section feels substantial */
   margin-block-start: clamp(8rem, 12vh, 18rem); /* use vh for vertical spacing */
   margin-block-end: var(--bottom-gap);          /* guaranteed gap below */
-  padding-top: -50px;
+  padding-top: -150px;
 }
 
 /* Image block */
@@ -43,6 +43,8 @@
   -ms-hyphens: auto;
   padding-left: 0;
   margin: 0;
+  font-size: 19px;
+  font-family: Gruppo;
 }
 
 /* Paragraph spacing */

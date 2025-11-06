@@ -34,17 +34,18 @@ export default function App() {
     <main className="bg-[var(--bg)] text-[var(--fg)]">
       <HeroVideo />
       <FinParallaxDivider
-  height={220}
+  height={700}
   scrollDistance={1600}
+  lockAt={1}
+  yStartPercent={300} 
   fins={[
-    { w: 40, left:  -15, z: 3, dur: 1.2 },
-    { w: 57, left: 0, z: 2, dur: 1.8 },
-    { w: 37, left: 30, z: 4, dur: 2.2 },
-    { w: 58, left: 48, z: 3, dur: 2.8 },
-    { w: 20, left: 75, z: 1, dur: 1.0 },
-    { w: 30, left: 80, z: 5, dur: 1.6 },
+    { w: 130, left: -70, z: 3, dur: 1 },
+    { w: 120, left: -50, z: 2, dur: 1.1 },
+    { w: 150, left: -32, z: 4, dur: 1.3 },
+    { w: 130, left: -2, z: 3, dur: 1.1 },
+    { w: 150, left: 20, z: 1, dur: 1.0 },
+    { w: 180, left: 35, z: 5, dur: 1.6 },
   ]}
-  sweepTarget="#after-hero"
 />
       
       <Profile />

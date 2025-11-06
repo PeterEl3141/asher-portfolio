@@ -37,6 +37,7 @@
     user-select: none;
     -webkit-user-drag: none;
     image-rendering: -webkit-optimize-contrast;
+    max-width: none;
   }
   
 
