@@ -16,7 +16,7 @@ export default function FinParallaxDivider({
   /** 0 = top of viewport, 1 = bottom. 0.5 = halfway up (your request). */
   lockAt = 0,
   fins = [],
-  finSrc = "/images/Fin-hero2.png",
+  finSrc = "/images/Fin-hero2.webp",
   className = "",
   containerSelector = "main",
 }) {
@@ -109,6 +109,15 @@ export default function FinParallaxDivider({
       position: "absolute", left: 0, right: 0, bottom: 0, width: "100%", y: 0
     });
 
+
+    // right after you append overlay & before building the timeline:
+    gsap.set(finRefs.current, {
+      willChange: "transform",
+      force3D: true,
+      z: 0,                    // create a GPU layer (translateZ(0))
+    });
+
+
     // Helpers that recompute on refresh/resize
     const stripH = () => overlay.offsetHeight || height;
     const lockPx = () => Math.max(0, Math.min(window.innerHeight, window.innerHeight * lockAt));
@@ -116,18 +125,27 @@ export default function FinParallaxDivider({
 
     // Build timeline: we animate each fin's pixel translate 'y' from startPx to lockPx.
     // Using function-based values keeps everything correct on refresh/resize.
+    // Build timeline
     const tl = gsap.timeline({ defaults: { ease: "none" } });
+
     finRefs.current.forEach((img, i) => {
       if (!img) return;
       const dur = typeof fins[i]?.dur === "number" ? fins[i].dur : 1;
 
       tl.fromTo(
         img,
-        { y: () => startPx() },
-        { y: () => lockPx(), duration: dur },
+        { y: () => Math.round(startPx()) },
+        {
+          y: () => Math.round(lockPx()),
+          duration: dur,
+          // 👇 NEW: snap y to whole pixels and force GPU
+          snap: { y: 1 },
+          force3D: true
+        },
         0
       );
     });
+
 
     // How long the hero is pinned while fins rise.
     const LOCK = typeof scrollDistance === "number" ? scrollDistance : height * 8;
@@ -175,6 +193,8 @@ export default function FinParallaxDivider({
             src={f.src || finSrc}
             alt=""
             draggable="false"
+            decoding="async"
+            loading="eager"
             style={{
               width: unit(f.w),
               left: unit(f.left),

@@ -18,6 +18,7 @@
   margin-block-start: clamp(8rem, 12vh, 18rem); /* use vh for vertical spacing */
   margin-block-end: var(--bottom-gap);          /* guaranteed gap below */
   padding-top: -150px;
+  top: -150;
 }
 
 /* Image block */
@@ -71,8 +72,8 @@
 
 /* --- Unfurl effect --- */
 .text-reveal {
-  --reveal-dur: 3800ms;
-  --reveal-delay: 1400ms; 
+  --reveal-dur: 2500ms;
+  --reveal-delay: 1100ms; 
   clip-path: inset(0 100% 0 0);
   will-change: clip-path, transform, filter;
   transition:

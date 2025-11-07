@@ -46,6 +46,8 @@ export default function Upcoming() {
           className="upcoming-main-img"
         />
       </div>
+      <p className="upcoming-title">Small Gods</p>
+
     </section>
   );
 }

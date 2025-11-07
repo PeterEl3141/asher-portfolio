@@ -1,0 +1,34 @@
+.videoP-root {
+    position: relative;
+    width: 100%;
+    /* You can tweak this cap; the canvas will auto-fit inside */
+    --stage-height: 68vh;
+    height: var(--stage-height);
+    overflow: hidden;
+    background: white;
+    z-index: 10;
+  }
+  
+  .videoP-canvas {
+    display: block;          /* no gaps */
+    width: 100%;
+    height: 100%;
+  }
+  
+  /* Optional: a slim overlay bug for the active title */
+  .videoP-bug {
+    position: absolute;
+    left: 80px;
+    bottom: 12px;
+    padding: 4px 8px;
+    font: 500 18px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    letter-spacing: .02em;
+    color: white;
+    background: #5c5c5c;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: .9;
+  }
+  
+
+  

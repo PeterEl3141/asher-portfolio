@@ -16,6 +16,8 @@ import FinParallaxDivider from './components/FinParallaxDivider.jsx';
 import FinNewDivider from './components/FinNewDivider.jsx';
 import PosterClip from './components/PosterClip.jsx';
 import VideoPlayer from "./components/VideoPlayer/VideoPlayer";
+import VideoP from "./components/VideoP/VideoP.jsx";
+import FinDividerStrip from './components/FinDividerStrip/FinDividerStrip.jsx';
 
 export default function App() {
 
@@ -34,26 +36,26 @@ export default function App() {
     <main className="bg-[var(--bg)] text-[var(--fg)]">
       <HeroVideo />
       <FinParallaxDivider
-  height={700}
-  scrollDistance={1600}
-  lockAt={1}
-  yStartPercent={300} 
-  fins={[
-    { w: 130, left: -70, z: 3, dur: 1 },
-    { w: 120, left: -50, z: 2, dur: 1.1 },
-    { w: 150, left: -32, z: 4, dur: 1.3 },
-    { w: 130, left: -2, z: 3, dur: 1.1 },
-    { w: 150, left: 20, z: 1, dur: 1.0 },
-    { w: 180, left: 35, z: 5, dur: 1.6 },
-  ]}
-/>
+      height={700}
+      scrollDistance={1600}
+      lockAt={1}
+      yStartPercent={300} 
+      fins={[
+        { w: 130, left: -70, z: 3, dur: 1 },
+        { w: 120, left: -50, z: 2, dur: 1.1 },
+        { w: 150, left: -32, z: 4, dur: 1.3 },
+        { w: 130, left: -2, z: 3, dur: 1.1 },
+        { w: 150, left: 22, z: 1, dur: 1.0 },
+        { w: 180, left: 35, z: 5, dur: 1.1 },
+      ]}
+    />
       
       <Profile />
 
       <PosterClip
-  posterSrc="/images/Nyama-Poster.png"
-  videoId="2dba4932447ad0a3dafe3d94808f1939"
-/>
+      posterSrc="/images/Nyama-Poster.png"
+      videoId="2dba4932447ad0a3dafe3d94808f1939"
+      />
 
 <PosterClip
   posterSrc="/images/Rabbi-Son-Poster.png"
@@ -61,7 +63,11 @@ export default function App() {
 />
 
 <AwardStripBlack/>
-<VideoPlayer videos={reels} initialIndex={0} stretchDuration={1200} />
+
+<FinDividerStrip height={80} />
+
+<VideoP videos={reels} initialIndex={1} />
+
 
 <AwardStripWhite/>
 
@@ -83,7 +89,12 @@ export default function App() {
 
 
 
-/*<ARDivider
+/*
+
+<VideoPlayer videos={reels} initialIndex={0} stretchDuration={1200} />
+
+
+<ARDivider
         height="150px"
         className="ar-divider--seam ar-divider--band ar-divider--blend"
         dashOffset="12px"   // move artwork up ~24px
