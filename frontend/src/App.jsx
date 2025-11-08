@@ -18,8 +18,42 @@ import PosterClip from './components/PosterClip.jsx';
 import VideoPlayer from "./components/VideoPlayer/VideoPlayer";
 import VideoP from "./components/VideoP/VideoP.jsx";
 import FinDividerStrip from './components/FinDividerStrip/FinDividerStrip.jsx';
+import { useState, useEffect } from 'react';
+
+
+// ---- tiny hook: true on desktop, false on tablet & below ----
+function useIsDesktop(minWidth = 1024) {
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined") return true; // SSR-safe default
+    return window.matchMedia(`(min-width: ${minWidth}px)`).matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia(`(min-width: ${minWidth}px)`);
+    const onChange = e => setIsDesktop(e.matches);
+    // modern addEventListener; falls back if needed
+    mql.addEventListener ? mql.addEventListener("change", onChange)
+                         : mql.addListener(onChange);
+    // sync once in case of hydration mismatch
+    setIsDesktop(mql.matches);
+    return () => {
+      mql.removeEventListener ? mql.removeEventListener("change", onChange)
+                              : mql.removeListener(onChange);
+    };
+  }, [minWidth]);
+
+  return isDesktop;
+}
+
+
+
+
+
 
 export default function App() {
+  // Desktop = width >= 1024px (iPad landscape and smaller are excluded)
+  const isDesktop = useIsDesktop(1024);
 
   const reels = [
     { id: "7d9cd1be2d5561193b5812f929fc3521", poster: "/posters/MukonSkate.png",       title: "MukonSkateProm_0" },
@@ -35,20 +69,23 @@ export default function App() {
   return (
     <main className="bg-[var(--bg)] text-[var(--fg)]">
       <HeroVideo />
-      <FinParallaxDivider
-      height={700}
-      scrollDistance={1600}
-      lockAt={1}
-      yStartPercent={300} 
-      fins={[
-        { w: 130, left: -70, z: 3, dur: 1 },
-        { w: 120, left: -50, z: 2, dur: 1.1 },
-        { w: 150, left: -32, z: 4, dur: 1.3 },
-        { w: 130, left: -2, z: 3, dur: 1.1 },
-        { w: 150, left: 22, z: 1, dur: 1.0 },
-        { w: 180, left: 35, z: 5, dur: 1.1 },
-      ]}
-    />
+      
+      {isDesktop && (
+        <FinParallaxDivider
+          height={700}
+          scrollDistance={1600}
+          lockAt={1}
+          yStartPercent={300}
+          fins={[
+            { w: 130, left: -70, z: 3, dur: 1 },
+            { w: 120, left: -50, z: 2, dur: 1.1 },
+            { w: 150, left: -32, z: 4, dur: 1.3 },
+            { w: 130, left: -2,  z: 3, dur: 1.1 },
+            { w: 150, left: 22,  z: 1, dur: 1.0 },
+            { w: 180, left: 35,  z: 5, dur: 1.1 },
+          ]}
+        />
+      )}
       
       <Profile />
 

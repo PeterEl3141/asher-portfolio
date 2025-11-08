@@ -31,4 +31,7 @@
   }
   
 
+  @media (max-width: 900px){
+    .videoP-root { --stage-height: 78vh; }
+  }
   

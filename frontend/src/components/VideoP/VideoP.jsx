@@ -5,8 +5,9 @@ import { Assets } from "pixi.js";
 import { gsap } from "gsap";
 import Hls from "hls.js";
 import "./VideoP.css";
-import FinDivider from "../FinDivider.jsx";
-import finWhite from "/images/Fin-white.png";
+// (imported but not used here; safe to keep if you add the divider overlay)
+// import FinDivider from "../FinDivider.jsx";
+// import finWhite from "/images/Fin-white.png";
 
 /* ------------------------------- Utils ------------------------------- */
 
@@ -30,7 +31,7 @@ class PixelateColsFilter extends PIXI.Filter {
         float cols = max(4.0, uCols);
         float rows = cols * max(0.001, uAspect);
         vec2 cell = vec2(cols, rows);
-        vec2 q = (floor(vTextureCoord * cell) + 0.5) / cell; // center-of-cell
+        vec2 q = (floor(vTextureCoord * cell) + 0.5) / cell;
         vec4 c = texture2D(uSampler, q);
         c.rgb = sat(c.rgb, uSat);
         gl_FragColor = c;
@@ -38,9 +39,6 @@ class PixelateColsFilter extends PIXI.Filter {
     `;
     super(undefined, fragment, { uCols: cols, uAspect: aspect, uSat: sat });
   }
-  setCols(c){ this.uniforms.uCols = c; }
-  setAspect(a){ this.uniforms.uAspect = a || this.uniforms.uAspect; }
-  setSat(s){ this.uniforms.uSat = s || this.uniforms.uSat; }
 }
 
 function fitContain(texW, texH, boxW, boxH){
@@ -90,14 +88,15 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
 export default function VideoP({
   videos = [],
   initialIndex = 0,
-  bandWidth = 28,          // pillar width
-  bandGap = 12,            // gap between pillars
-  bandCols = 8,            // lower = bigger squares
-  transitionMs = 400,      // fast & smooth
-  innerGap = 16,           // gap center↔first pillar each side
+  bandWidth = 28,          // pillar thickness (px)
+  bandGap = 12,            // gap between pillars (px)
+  bandCols = 8,            // lower = chunkier squares
+  transitionMs = 400,      // morph duration
+  innerGap = 16,           // gap between center & nearest pillar
   pillarSaturation = 1.2,
-  hoverDelayMs = 140,      // hover-intent delay
-  hoverCooldownMs = 220,   // cooldown after a switch
+  hoverDelayMs = 140,
+  hoverCooldownMs = 220,
+  stackAt = 900,           // 👈 when container width <= this, stack pillars top/bottom
 }){
   const containerRef = useRef(null);
   const appRef = useRef(null);
@@ -114,6 +113,9 @@ export default function VideoP({
   const roRef     = useRef(null);
   const pillarsMapRef = useRef(new Map());         // origIdx -> pillar Sprite
 
+  // Layout mode: "h" (left/right rails) or "v" (top/bottom rails)
+  const layoutModeRef = useRef("h");
+
   // Hover-intent & cooldown
   const hoverTimerRef = useRef(null);
   const hoverIdxRef   = useRef(null);
@@ -121,14 +123,11 @@ export default function VideoP({
   const layoutTickRef = useRef(0);
 
   const posterURLs = useMemo(() => videos.map(v => v.poster).filter(Boolean), [videos]);
-  const posterTextures = useMemo(
-    () => videos.map(v => {
-      const tex = PIXI.Texture.from(v.poster);
-      try { tex.source.scaleMode = 'nearest'; } catch {}
-      return tex;
-    }),
-    [videos]
-  );
+  useMemo(() => videos.map(v => {
+    const t = PIXI.Texture.from(v.poster);
+    try { t.source.scaleMode = 'nearest'; } catch {}
+    return t;
+  }), [videos]);
 
   /* ----------------------------- Mount -------------------------------- */
 
@@ -146,7 +145,7 @@ export default function VideoP({
         width: w, height: h,
         antialias: false,
         powerPreference: "high-performance",
-        background: 0xffffff,
+        background: 0xffffff,  // white canvas (works with your white page)
         backgroundAlpha: 1,
         hello: false,
       });
@@ -157,17 +156,13 @@ export default function VideoP({
       app.canvas.classList.add("videoP-canvas");
 
       try { PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.OFF; } catch {}
-
-      // Make sure layering is deterministic
       app.stage.sortableChildren = true;
 
-      // Preload posters
       try { if (posterURLs.length) await Assets.load(posterURLs); } catch {}
 
       buildStage();
       layoutAll();
       await primePool(current);
-      // initial center zIndex above rail
       centerRef.current.zIndex = 5;
       railRef.current.zIndex = 0;
 
@@ -199,7 +194,7 @@ export default function VideoP({
     layoutAll();
     primePool(current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [posterTextures, current, videos.length, bandWidth, bandGap, bandCols, innerGap, pillarSaturation]);
+  }, [current, videos.length, bandWidth, bandGap, bandCols, innerGap, pillarSaturation, stackAt]);
 
   /* ---------------------------- Layout -------------------------------- */
 
@@ -225,48 +220,83 @@ export default function VideoP({
     return { w: Math.round(r.width), h: Math.round(r.height) };
   }
 
-  const railSpan = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
-  const leftRightCounts = (cur) => ({
-    left: Math.max(0, cur),
-    right: Math.max(0, videos.length - cur - 1)
-  });
-
+  // Decide center rect based on orientation
   function centerRectFor(cur){
     const { w, h } = stageBox();
-    const { left, right } = leftRightCounts(cur);
-    const leftW  = railSpan(left)  + (left  > 0 ? innerGap : 0);
-    const rightW = railSpan(right) + (right > 0 ? innerGap : 0);
-    const cx = leftW;
-    const cw = Math.max(0, w - leftW - rightW);
-    return { x: cx, y: 0, w: cw, h };
+    const vertical = w <= stackAt;
+    layoutModeRef.current = vertical ? "v" : "h";
+
+    if (!vertical){
+      // Horizontal rails (left/right)
+      const left  = Math.max(0, cur);
+      const right = Math.max(0, videos.length - cur - 1);
+      const span  = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
+      const leftW  = span(left)  + (left  > 0 ? innerGap : 0);
+      const rightW = span(right) + (right > 0 ? innerGap : 0);
+      const cx = leftW;
+      const cw = Math.max(0, w - leftW - rightW);
+      return { x: cx, y: 0, w: cw, h };
+    }
+
+    // Vertical rails (top/bottom)
+    const top    = Math.max(0, cur);
+    const bottom = Math.max(0, videos.length - cur - 1);
+    const spanV  = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
+    const topH    = spanV(top)    + (top    > 0 ? innerGap : 0);
+    const bottomH = spanV(bottom) + (bottom > 0 ? innerGap : 0);
+    const cy = topH;
+    const ch = Math.max(0, h - topH - bottomH);
+    return { x: 0, y: cy, w, h: ch };
   }
 
   function pillarRectForIndex(idx, cur){
-    const { h } = stageBox();
-    const cRect = centerRectFor(cur);
+    const { w, h } = stageBox();
+    const mode = layoutModeRef.current;
+    const cRect = centerRectFor(cur); // refresh mode & get rect
+
+    if (mode === "h"){
+      // Left/right pillars (vertical bands)
+      const span = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
+      if (idx < cur){
+        const pos = idx;
+        const leftRailWidth = span(cur);
+        const startX = cRect.x - (leftRailWidth + (cur > 0 ? innerGap : 0));
+        const x = startX + pos * (bandWidth + bandGap);
+        return { x: Math.round(x), y: 0, w: bandWidth, h };
+      } else if (idx > cur){
+        const pos = idx - cur - 1;
+        const startX = cRect.x + cRect.w + (cRect.w > 0 ? innerGap : 0);
+        const x = startX + pos * (bandWidth + bandGap);
+        return { x: Math.round(x), y: 0, w: bandWidth, h };
+      }
+      return null;
+    }
+
+    // Top/bottom pillars (horizontal bands)
+    const spanV = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
     if (idx < cur){
+      // top rail
       const pos = idx;
-      const leftRailWidth = railSpan(cur);
-      const startX = cRect.x - (leftRailWidth + (cur > 0 ? innerGap : 0));
-      const x = startX + pos * (bandWidth + bandGap);
-      return { x: Math.round(x), y: 0, w: bandWidth, h };
+      const topRailHeight = spanV(cur);
+      const startY = cRect.y - (topRailHeight + (cur > 0 ? innerGap : 0));
+      const y = startY + pos * (bandWidth + bandGap);
+      return { x: 0, y: Math.round(y), w, h: bandWidth };
     } else if (idx > cur){
+      // bottom rail
       const pos = idx - cur - 1;
-      const startX = cRect.x + cRect.w + (cRect.w > 0 ? innerGap : 0);
-      const x = startX + pos * (bandWidth + bandGap);
-      return { x: Math.round(x), y: 0, w: bandWidth, h };
+      const startY = cRect.y + cRect.h + (cRect.h > 0 ? innerGap : 0);
+      const y = startY + pos * (bandWidth + bandGap);
+      return { x: 0, y: Math.round(y), w, h: bandWidth };
     }
     return null;
   }
 
-
   function layoutRailFor(cur){
-    // rebuild rails for a given index (used at end of transition)
     const rail = railRef.current;
     if (!rail) return;
     rail.removeChildren();
     pillarsMapRef.current.clear();
-  
+
     const buildPillar = (i) => {
       const r = pillarRectForIndex(i, cur);
       const sprite = PIXI.Sprite.from(videos[i].poster);
@@ -275,15 +305,15 @@ export default function VideoP({
       sprite.cursor = "pointer";
       sprite.alpha = 0.99;
       sprite.x = r.x; sprite.y = r.y; sprite.width = r.w; sprite.height = r.h;
-  
+
       const filt = new PixelateColsFilter(
         bandCols,
         sprite.height / Math.max(1, sprite.width),
         pillarSaturation
       );
       sprite.filters = [filt];
-  
-      // hover-intent handlers
+
+      // hover intent
       sprite.on("pointerenter", () => {
         if (animatingRef.current) return;
         if (Date.now() < hoverCooldownUntilRef.current) return;
@@ -294,42 +324,40 @@ export default function VideoP({
         if (hoverIdxRef.current === i) hoverIdxRef.current = null;
         cancelHoverTimer();
       });
-  
-      // 👇 tap-to-switch (mobile/desktop click)
+      // tap (mobile/desktop click)
       sprite.on("pointertap", () => {
         if (animatingRef.current) return;
         if (Date.now() < hoverCooldownUntilRef.current) return;
         trySwitch(i);
       });
-  
+
       rail.addChild(sprite);
       pillarsMapRef.current.set(i, sprite);
     };
-  
+
     for (let i = 0; i < cur; i++) buildPillar(i);
     for (let i = cur + 1; i < videos.length; i++) buildPillar(i);
   }
-  
+
   function layoutAll(){
     const app = appRef.current;
     const center = centerRef.current;
     const rail = railRef.current;
     if (!app || !center || !rail) return;
-  
+
     layoutTickRef.current++;
-  
-    // Center (full height)
+
+    // Center
     const cRect = centerRectFor(current);
     const tex = center.texture?.source;
     const tW = tex?.width || 16, tH = tex?.height || 9;
     const fit = fitContain(tW, tH, Math.round(cRect.w), Math.round(cRect.h));
     center.position.set(Math.round(cRect.x + fit.x), Math.round(cRect.y + fit.y));
     center.scale.set(fit.scaleX, fit.scaleY);
-  
-    // Rails (for current state)
+
+    // Rebuild rails for this mode/index
     layoutRailFor(current);
   }
-  
 
   /* ----------------------- Hover Intent (safe) ------------------------ */
 
@@ -401,14 +429,13 @@ export default function VideoP({
     const incoming = await getVideoRecord(nextIdx);
     const currentRec = poolRef.current.get(current);
 
-    // Rects (now + final)
+    // Current bounds & source pillar
     const cRectNow = center.getBounds();
     const srcPillar = pillarsMapRef.current.get(nextIdx);
     if (!srcPillar) { animatingRef.current = false; return; }
     const fromRect = srcPillar.getBounds();
-    const toRectForOutgoing = pillarRectForIndex(current, nextIdx);
 
-    // Final center box for nextIdx
+    // FINAL rectangles computed for nextIdx's layout (sets mode too)
     const finalCRect = centerRectFor(nextIdx);
     const incSrc = incoming.texture?.source;
     const incW = incSrc?.width || 16, incH = incSrc?.height || 9;
@@ -419,6 +446,7 @@ export default function VideoP({
       w: Math.round(fitFinal.w),
       h: Math.round(fitFinal.h),
     };
+    const toRectForOutgoing = pillarRectForIndex(current, nextIdx); // current becomes a pillar in the new layout
 
     // Remove source pillar immediately
     try {
@@ -427,10 +455,10 @@ export default function VideoP({
     } catch {}
     pillarsMapRef.current.delete(nextIdx);
 
-    // Freeze the rail's bitmap so NOTHING inside it can redraw mid-frame
+    // Freeze the rail to prevent any single-frame redraw glitches
     rail.cacheAsBitmap = true;
 
-    // Animation sprites above everything
+    // Animation sprites
     const incomingSprite = new PIXI.Sprite(incoming.texture);
     try { incomingSprite.texture.source.scaleMode = 'nearest'; } catch {}
     incomingSprite.zIndex = 10;
@@ -443,7 +471,7 @@ export default function VideoP({
     outgoingSprite.zIndex = 10;
     outgoingSprite.x = Math.round(cRectNow.x); outgoingSprite.y = Math.round(cRectNow.y);
     outgoingSprite.width = Math.round(cRectNow.width); outgoingSprite.height = Math.round(cRectNow.height);
-    const startCols = Math.max(12, Math.round(cRectNow.width / 28));
+    const startCols = Math.max(12, Math.round((layoutModeRef.current === "h" ? cRectNow.width : cRectNow.height) / 28));
     const outFilt = new PixelateColsFilter(
       startCols,
       outgoingSprite.height / Math.max(1, outgoingSprite.width),
@@ -458,18 +486,10 @@ export default function VideoP({
 
     const ease = "cubic-bezier(.22,1,.36,1)";
     const snap = { x: 1, y: 1, width: 1, height: 1 };
-    const tl = gsap.timeline({
-      defaults: { duration: transitionMs / 1000, ease, snap },
-      overwrite: "auto"
-    });
+    const tl = gsap.timeline({ defaults: { duration: transitionMs / 1000, ease, snap }, overwrite: "auto" });
 
     // Incoming pillar -> FINAL center box
-    tl.to(incomingSprite, {
-      x: finalTarget.x,
-      y: finalTarget.y,
-      width: finalTarget.w,
-      height: finalTarget.h,
-    }, 0);
+    tl.to(incomingSprite, { x: finalTarget.x, y: finalTarget.y, width: finalTarget.w, height: finalTarget.h }, 0);
 
     // Outgoing center -> its new pillar slot
     tl.to(outgoingSprite, {
@@ -483,9 +503,7 @@ export default function VideoP({
     tl.to(outFilt.uniforms, { uCols: bandCols }, 0);
 
     tl.add(() => {
-      // Pause rendering while we swap everything atomically
-      const ticker = app.ticker;
-      try { ticker.stop(); } catch {}
+      const ticker = app.ticker; try { ticker.stop(); } catch {}
 
       // Commit center to EXACT final box
       setCenterTexture(nextIdx, true);
@@ -503,21 +521,19 @@ export default function VideoP({
       layoutTickRef.current++;
       layoutRailFor(nextIdx);
 
-      // Unfreeze the rail now that it's rebuilt for nextIdx
+      // Unfreeze the rail & resume
       rail.cacheAsBitmap = false;
-
-      // Resume video + rendering
       const newRec = poolRef.current.get(nextIdx);
       try { newRec?.video?.play?.(); } catch {}
       try { ticker.start(); } catch {}
 
-      // State + cooldown
       setCurrent(nextIdx);
       hoverCooldownUntilRef.current = Date.now() + hoverCooldownMs;
-
       animatingRef.current = false;
     });
   }
+
+  /* ------------------------------------------------------------------- */
 
   const activeTitle = videos[current]?.title || "";
 
