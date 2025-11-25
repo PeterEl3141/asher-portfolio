@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import HLSVideo from "../components/HLSVideo"; // adjust path if needed
+import HLSVideo from "../HLSVideo"; // adjust path if needed
 import "./PosterClip.css";
 
 /**

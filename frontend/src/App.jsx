@@ -1,25 +1,19 @@
-import HeroVideo from './components/HeroVideo';
-import ReelCanvas from './components/ReelCanvas';
-import SiteFooter from './components/SiteFooter';
-import Profile from './components/Profile.jsx';
-import PosterClip1 from './components/PosterClip1.jsx';
-import PosterClip2 from './components/PosterClip2.jsx';
-import AwardStripBlack from './components/AwardStripBlack.jsx';
-import AwardStripWhite from './components/AwardStripWhite.jsx';
-import ADivider from './components/ADivider.jsx';
-import ARDivider from './components/ARDivider.jsx';
-import Press from './components/Press.jsx';
-import FinDivider from "./components/FinDivider";
-import Upcoming from './components/Upcoming.jsx';
-import HeroDivider from './components/HeroDivider.jsx';
-import FinParallaxDivider from './components/FinParallaxDivider.jsx';
-import FinNewDivider from './components/FinNewDivider.jsx';
-import PosterClip from './components/PosterClip.jsx';
-import VideoPlayer from "./components/VideoPlayer/VideoPlayer";
+import HeroVideo from './components/HeroVideo/HeroVideo.jsx';
+import SiteFooter from './components/SiteFooter/SiteFooter.jsx';
+import Profile from './components/Profile/Profile.jsx';
+import AwardStripBlack from './components/AwardStripBlack/AwardStripBlack.jsx';
+import AwardStripWhite from './components/AwardStripWhite/AwardStripWhite.jsx';
+import ARDivider from './components/ARDivider/ARDivider.jsx';
+import Press from './components/Press/Press.jsx';
+import Upcoming from './components/Upcoming/Upcoming.jsx';
+import FinParallaxDivider from './components/FinParallaxDivider/FinParallaxDivider.jsx';
+import PosterClip from './components/PosterClip/PosterClip.jsx';
 import VideoP from "./components/VideoP/VideoP.jsx";
 import FinDividerStrip from './components/FinDividerStrip/FinDividerStrip.jsx';
 import { useState, useEffect } from 'react';
-
+import './components/VideoP/VideoP.css'
+import { useRef } from 'react';
+import FinStage from './components/FinStage/FinStage.jsx';
 
 // ---- tiny hook: true on desktop, false on tablet & below ----
 function useIsDesktop(minWidth = 1024) {
@@ -66,28 +60,35 @@ export default function App() {
     { id: "40212dc32fdd693428973dd61dbb7d9f", poster: "/posters/Discovery.png",        title: "discovery" }
   ];
 
+
+  const profileRef = useRef(null);
+
+
   return (
     <main className="bg-[var(--bg)] text-[var(--fg)]">
+
       <HeroVideo />
+
+{isDesktop && (
+    
+<FinStage
+      height={705}
+      scrollDistance={1000}
+      lockAt={1}          // fins lock to bottom of viewport
+      yStartPercent={300} // start well below the viewport
+      fins={[
+        { w: 130, left: -70, z: 3, dur: 1.00 },
+        { w: 120, left: -50, z: 2, dur: 1.10 },
+        { w: 150, left: -32, z: 4, dur: 1.30 },
+        { w: 130, left:  -2, z: 3, dur: 1.10 },
+        { w: 150, left:  22, z: 1, dur: 1.00 },
+        { w: 180, left:  35, z: 5, dur: 1.10 },
+      ]}
+    />
+)}
+
+  <Profile />
       
-      {isDesktop && (
-        <FinParallaxDivider
-          height={700}
-          scrollDistance={1600}
-          lockAt={1}
-          yStartPercent={300}
-          fins={[
-            { w: 130, left: -70, z: 3, dur: 1 },
-            { w: 120, left: -50, z: 2, dur: 1.1 },
-            { w: 150, left: -32, z: 4, dur: 1.3 },
-            { w: 130, left: -2,  z: 3, dur: 1.1 },
-            { w: 150, left: 22,  z: 1, dur: 1.0 },
-            { w: 180, left: 35,  z: 5, dur: 1.1 },
-          ]}
-        />
-      )}
-      
-      <Profile />
 
       <PosterClip
       posterSrc="/images/Nyama-Poster.png"
@@ -104,9 +105,8 @@ export default function App() {
 <FinDividerStrip height={80} />
 
 <VideoP videos={reels} initialIndex={1} />
-
-
 <AwardStripWhite/>
+
 
 <Press/>
 
@@ -193,5 +193,33 @@ export default function App() {
 
 
           { src: "/clips/failures.mp4",          poster: "/posters/Failures.png", title: "failures" },
+
+
+
+
+          {isDesktop && (
+        <FinParallaxDivider
+      height={700}
+      scrollDistance={1600}
+      lockAt={1}
+      yStartPercent={300}
+      revealStart={0.62}
+      revealEnd={0.85}
+      risePx={100}
+      bottomPeek={22}
+      nextTarget="#profile"  
+      fins={[
+        { w: 130, left: -70, z: 3, dur: 1 },
+        { w: 120, left: -50, z: 2, dur: 1.1 },
+        { w: 150, left: -32, z: 4, dur: 1.3 },
+        { w: 130, left: -2,  z: 3, dur: 1.1 },
+        { w: 150, left: 22,  z: 1, dur: 1.0 },
+        { w: 180, left: 35,  z: 5, dur: 1.1 },
+      ]}
+    >
+    </FinParallaxDivider>
+      )}
+
+     <Profile />
 
     */

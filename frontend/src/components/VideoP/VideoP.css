@@ -29,6 +29,13 @@
     pointer-events: none;
     opacity: .9;
   }
+
+
+
+
+  .videoP-section {
+  background: #fff;     /* <-- the margin area inherits this */
+}
   
 
   @media (max-width: 900px){

@@ -1,4 +1,4 @@
-import FinDivider from "../FinDivider.jsx";
+import FinDivider from "../FinDivider/FinDivider.jsx";
 import finWhite from "/images/Fin-white.png";
 import './FinDividerStrip.css'
 export default function FinDividerStrip({ height = 80 }) {

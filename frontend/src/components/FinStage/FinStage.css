@@ -1,0 +1,35 @@
+/* Overlay (runtime switches fixed/absolute) */
+.finpxd__overlay {
+  left: 0; right: 0; width: 100%;
+  pointer-events: none;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  z-index: 5; /* above hero */
+}
+
+/* Small weld so no seam shows at baseline */
+.finpxd__baseline {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: var(--bg, #000);
+}
+
+/* Every fin image (bottom anchored) */
+.finpxd__img {
+  position: absolute;
+  bottom: 0;
+  height: auto;
+  max-width: none;
+  transform-origin: bottom center;
+  will-change: transform;
+  backface-visibility: hidden;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* anchor after the hero so we can locate it in JS */
+.finpxd__anchor { height: 0; display: block; }
+
+/* Ensure the hero can be fully hidden after the pin */
+#hero.hero[data-occluded="1"] { visibility: hidden; }

@@ -1,0 +1,40 @@
+/* Overlay: JS swaps fixed/absolute */
+.finpxd__overlay {
+  left: 0; right: 0;
+  width: 100%;
+  pointer-events: none;
+  z-index: 2147483647;             /* above hero, below fixed profile */
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.finpxd__baseline {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: var(--bg, #000);
+}
+
+.finpxd__img {
+  position: absolute;
+  bottom: 0;
+  height: auto;
+  max-width: none;
+  transform-origin: bottom center;
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* anchor + flow spacer */
+.finpxd__anchor { height: 0; width: 100%; display: block; }
+.fpd__spacer   { height: 0; width: 100%; }
+
+/* while profile is floating */
+.fpd-fixed {
+  transition: none !important;
+  pointer-events: auto;
+}

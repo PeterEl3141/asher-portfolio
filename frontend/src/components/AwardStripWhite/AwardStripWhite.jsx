@@ -1,6 +1,5 @@
 import React from "react";
 import "./AwardStripWhite.css";
-import FinDivider from "./FinDivider.jsx";
 import finWhite from "/images/Fin-white.png";
 
 const logos = [
@@ -19,18 +18,9 @@ export default function AwardStripWhite() {
     <section className="film-awards-white">
         
        
-
-      <div className="film-awards-white__logos">
-        {logos.map(({ src, alt }) => (
-          <img
-            key={src}
-            src={publicUrl(`/awards/${src}`)}  // files in /public/awards/
-            alt={alt}
-            className="award-white"
-            loading="lazy"
-          />
-        ))}
-      </div>
+    
+   
+      
     </section>
   );
 }
@@ -49,5 +39,19 @@ scrollLinked    // <- enable
 speedX={0.35}   // horizontal rate (px per px scroll)
 // vertical rate (negative = drift upward when scrolling down)
 />
+
+
+
+   <div className="film-awards-white__logos">
+        {logos.map(({ src, alt }) => (
+          <img
+            key={src}
+            src={publicUrl(`/awards/${src}`)}  // files in /public/awards/
+            alt={alt}
+            className="award-white"
+            loading="lazy"
+          />
+        ))}
+      </div>
 
 */

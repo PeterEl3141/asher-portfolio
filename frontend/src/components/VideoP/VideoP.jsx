@@ -5,9 +5,6 @@ import { Assets } from "pixi.js";
 import { gsap } from "gsap";
 import Hls from "hls.js";
 import "./VideoP.css";
-// (imported but not used here; safe to keep if you add the divider overlay)
-// import FinDivider from "../FinDivider.jsx";
-// import finWhite from "/images/Fin-white.png";
 
 /* ------------------------------- Utils ------------------------------- */
 
@@ -31,7 +28,7 @@ class PixelateColsFilter extends PIXI.Filter {
         float cols = max(4.0, uCols);
         float rows = cols * max(0.001, uAspect);
         vec2 cell = vec2(cols, rows);
-        vec2 q = (floor(vTextureCoord * cell) + 0.5) / cell;
+        vec2 q = (floor(vTextureCoord * cell) + 0.5) / cell; // center-of-cell
         vec4 c = texture2D(uSampler, q);
         c.rgb = sat(c.rgb, uSat);
         gl_FragColor = c;
@@ -50,37 +47,104 @@ function fitContain(texW, texH, boxW, boxH){
   return { x, y, w, h, scaleX: w / texW, scaleY: h / texH };
 }
 
-/** HLS-backed <video> → Pixi Texture (with 'nearest' sampling) */
+/** HLS-backed <video> → Pixi Texture (robust looping with hls.js preferred) */
 async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
   const el = document.createElement("video");
-  el.playsInline = true; el.muted = muted; el.autoplay = autoplay;
-  el.crossOrigin = "anonymous"; el.preload = "auto";
+  el.playsInline = true;
+  el.muted = muted;
+  el.autoplay = autoplay;
+  el.crossOrigin = "anonymous";
+  el.preload = "auto";
+  el.loop = false; // we manage looping
+
   const src = hlsSrc(id);
-  const canNativeHls = el.canPlayType?.("application/vnd.apple.mpegURL");
-  let hls;
+  const preferHlsJs = Hls.isSupported();
+  let hls = null;
+  let vodDuration = NaN;
+  let hb = null;
+  let lastCT = 0;
+
+  const seekableStart = () => {
+    const s = el.seekable; if (s && s.length) { try { return s.start(0); } catch {} }
+    const b = el.buffered; if (b && b.length) { try { return b.start(0); } catch {} }
+    return 0;
+  };
+
+  const restartFromStart = () => {
+    try {
+      const start = seekableStart() + 0.03;
+      if (hls) {
+        try { hls.stopLoad(); } catch {}
+        try { hls.startLoad(0); } catch {}
+      } else {
+        el.src = "";
+        setTimeout(() => { el.src = src; }, 0);
+      }
+      el.currentTime = start;
+      const p = el.play(); if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch {}
+  };
+
+  const onTimeupdate = () => {
+    if (Number.isFinite(vodDuration) && vodDuration > 0) {
+      if (vodDuration - el.currentTime <= 0.25) restartFromStart();
+    }
+  };
+
+  const startHeartbeat = () => {
+    if (hb) return;
+    hb = setInterval(() => {
+      const notAdvancing = Math.abs(el.currentTime - lastCT) < 0.01;
+      lastCT = el.currentTime;
+      if ((Number.isFinite(vodDuration) && vodDuration - el.currentTime <= 0.5) ||
+          el.ended || (notAdvancing && el.currentTime > 0)) {
+        restartFromStart();
+      }
+    }, 350);
+  };
+  const stopHeartbeat = () => { if (hb) { clearInterval(hb); hb = null; } };
 
   await new Promise((resolve, reject) => {
-    const ok = () => resolve();
+    const ok = () => {
+      el.addEventListener("timeupdate", onTimeupdate);
+      startHeartbeat();
+      resolve();
+    };
     const fail = (e) => reject(e || new Error("HLS error"));
-    if (canNativeHls){
-      el.src = src;
-      el.addEventListener("loadedmetadata", ok, { once: true });
-      el.addEventListener("error", fail, { once: true });
-    } else if (Hls.isSupported()){
+
+    if (preferHlsJs) {
       hls = new Hls({ autoStartLoad: true, lowLatencyMode: true });
       hls.attachMedia(el);
       hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
+      hls.on(Hls.Events.LEVEL_LOADED, (_evt, data) => {
+        const det = data?.details;
+        if (det && det.live === false && Number.isFinite(det.totalduration)) {
+          vodDuration = det.totalduration;
+        }
+      });
       hls.on(Hls.Events.MANIFEST_PARSED, ok);
-      hls.on(Hls.Events.ERROR, (_, d) => { if (d?.fatal) fail(); });
-    } else fail(new Error("No HLS support"));
+      hls.on(Hls.Events.ERROR, (_evt, data) => { if (data?.fatal) fail(); });
+    } else {
+      el.src = src;
+      el.addEventListener("loadedmetadata", ok, { once: true });
+      el.addEventListener("error", fail, { once: true });
+    }
   });
 
   try { if (autoplay) await el.play(); } catch {}
 
   const texture = PIXI.Texture.from(el);
   try { texture.source.scaleMode = 'nearest'; } catch {}
-  const destroy = () => { try { hls?.destroy?.(); } catch {}; try { el.pause?.(); } catch {}; try { el.src=""; } catch {}; };
-  return { video: el, texture, destroy };
+
+  const destroy = () => {
+    try { el.removeEventListener("timeupdate", onTimeupdate); } catch {}
+    stopHeartbeat();
+    try { hls?.destroy?.(); } catch {}
+    try { el.pause?.(); } catch {}
+    try { el.src = ""; } catch {}
+  };
+
+  return { video: el, texture, destroy, hls };
 }
 
 /* ------------------------------ Component ------------------------------ */
@@ -88,15 +152,15 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
 export default function VideoP({
   videos = [],
   initialIndex = 0,
-  bandWidth = 28,          // pillar thickness (px)
-  bandGap = 12,            // gap between pillars (px)
-  bandCols = 8,            // lower = chunkier squares
-  transitionMs = 400,      // morph duration
-  innerGap = 16,           // gap between center & nearest pillar
+  bandWidth = 28,
+  bandGap = 12,
+  bandCols = 8,
+  transitionMs = 400,
+  innerGap = 16,
   pillarSaturation = 1.2,
   hoverDelayMs = 140,
   hoverCooldownMs = 220,
-  stackAt = 900,           // 👈 when container width <= this, stack pillars top/bottom
+  stackAt = 900,
 }){
   const containerRef = useRef(null);
   const appRef = useRef(null);
@@ -105,22 +169,39 @@ export default function VideoP({
     Math.min(Math.max(initialIndex, 0), Math.max(videos.length - 1, 0))
   );
 
-  const poolRef = useRef(new Map());               // idx -> { video, texture, destroy }
+  const poolRef = useRef(new Map());               // idx -> { video, texture, destroy, hls }
   const animatingRef = useRef(false);
 
-  const centerRef = useRef(null);                  // center sprite
-  const railRef   = useRef(null);                  // pillars container
+  const centerRef = useRef(null);
+  const railRef   = useRef(null);
   const roRef     = useRef(null);
-  const pillarsMapRef = useRef(new Map());         // origIdx -> pillar Sprite
+  const pillarsMapRef = useRef(new Map());
 
-  // Layout mode: "h" (left/right rails) or "v" (top/bottom rails)
   const layoutModeRef = useRef("h");
 
-  // Hover-intent & cooldown
   const hoverTimerRef = useRef(null);
   const hoverIdxRef   = useRef(null);
   const hoverCooldownUntilRef = useRef(0);
   const layoutTickRef = useRef(0);
+
+  // ---- prefetch knobs ----
+  const PREFETCH_RADIUS = 2;
+  async function prewarmIdx(i){
+    if (i < 0 || i >= videos.length) return;
+    if (poolRef.current.has(i)) return;
+    try {
+      const rec = await getVideoRecord(i, { prefetchOnly: true });
+      // tiny play->pause helps decode first frame, then sit ready
+      try { await rec.video.play(); rec.video.pause(); } catch {}
+      try { rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001); } catch {}
+    } catch {}
+  }
+  function prewarmAround(idx){
+    for (let d = 1; d <= PREFETCH_RADIUS; d++){
+      prewarmIdx(idx - d);
+      prewarmIdx(idx + d);
+    }
+  }
 
   const posterURLs = useMemo(() => videos.map(v => v.poster).filter(Boolean), [videos]);
   useMemo(() => videos.map(v => {
@@ -145,7 +226,7 @@ export default function VideoP({
         width: w, height: h,
         antialias: false,
         powerPreference: "high-performance",
-        background: 0xffffff,  // white canvas (works with your white page)
+        background: 0xffffff,
         backgroundAlpha: 1,
         hello: false,
       });
@@ -165,6 +246,9 @@ export default function VideoP({
       await primePool(current);
       centerRef.current.zIndex = 5;
       railRef.current.zIndex = 0;
+
+      // 🔥 prewarm neighbors right away
+      prewarmAround(current);
 
       const ro = new ResizeObserver(() => {
         if (!appRef.current || !containerRef.current) return;
@@ -220,14 +304,12 @@ export default function VideoP({
     return { w: Math.round(r.width), h: Math.round(r.height) };
   }
 
-  // Decide center rect based on orientation
   function centerRectFor(cur){
     const { w, h } = stageBox();
     const vertical = w <= stackAt;
     layoutModeRef.current = vertical ? "v" : "h";
 
     if (!vertical){
-      // Horizontal rails (left/right)
       const left  = Math.max(0, cur);
       const right = Math.max(0, videos.length - cur - 1);
       const span  = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
@@ -238,7 +320,6 @@ export default function VideoP({
       return { x: cx, y: 0, w: cw, h };
     }
 
-    // Vertical rails (top/bottom)
     const top    = Math.max(0, cur);
     const bottom = Math.max(0, videos.length - cur - 1);
     const spanV  = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
@@ -252,10 +333,9 @@ export default function VideoP({
   function pillarRectForIndex(idx, cur){
     const { w, h } = stageBox();
     const mode = layoutModeRef.current;
-    const cRect = centerRectFor(cur); // refresh mode & get rect
+    const cRect = centerRectFor(cur);
 
     if (mode === "h"){
-      // Left/right pillars (vertical bands)
       const span = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
       if (idx < cur){
         const pos = idx;
@@ -272,17 +352,15 @@ export default function VideoP({
       return null;
     }
 
-    // Top/bottom pillars (horizontal bands)
+    // Vertical mode: top / bottom rails
     const spanV = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
     if (idx < cur){
-      // top rail
       const pos = idx;
       const topRailHeight = spanV(cur);
       const startY = cRect.y - (topRailHeight + (cur > 0 ? innerGap : 0));
       const y = startY + pos * (bandWidth + bandGap);
       return { x: 0, y: Math.round(y), w, h: bandWidth };
     } else if (idx > cur){
-      // bottom rail
       const pos = idx - cur - 1;
       const startY = cRect.y + cRect.h + (cRect.h > 0 ? innerGap : 0);
       const y = startY + pos * (bandWidth + bandGap);
@@ -313,10 +391,11 @@ export default function VideoP({
       );
       sprite.filters = [filt];
 
-      // hover intent
+      // hover intent + prewarm
       sprite.on("pointerenter", () => {
         if (animatingRef.current) return;
         if (Date.now() < hoverCooldownUntilRef.current) return;
+        prewarmIdx(i); // 🔥 warm this target immediately
         hoverIdxRef.current = i;
         startHoverTimer(i, layoutTickRef.current);
       });
@@ -347,7 +426,6 @@ export default function VideoP({
 
     layoutTickRef.current++;
 
-    // Center
     const cRect = centerRectFor(current);
     const tex = center.texture?.source;
     const tW = tex?.width || 16, tH = tex?.height || 9;
@@ -355,7 +433,6 @@ export default function VideoP({
     center.position.set(Math.round(cRect.x + fit.x), Math.round(cRect.y + fit.y));
     center.scale.set(fit.scaleX, fit.scaleY);
 
-    // Rebuild rails for this mode/index
     layoutRailFor(current);
   }
 
@@ -377,17 +454,26 @@ export default function VideoP({
 
   /* ---------------------------- Pooling ------------------------------- */
 
-  async function getVideoRecord(idx){
+  async function getVideoRecord(idx, { prefetchOnly = false } = {}){
     if (poolRef.current.has(idx)) return poolRef.current.get(idx);
+
+    // Always create the media pipeline; for prefetch we'll pause it right after
     const rec = await createStreamVideo(videos[idx].id, { autoplay: true, muted: true });
     poolRef.current.set(idx, rec);
 
-    // keep only current ±1
+    if (prefetchOnly) {
+      try { await rec.video.play(); rec.video.pause(); } catch {}
+      try { rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001); } catch {}
+    }
+
+    // Keep only current ± PREFETCH_RADIUS
     const want = new Set([current]);
-    if (current - 1 >= 0) want.add(current - 1);
-    if (current + 1 < videos.length) want.add(current + 1);
+    for (let d = 1; d <= PREFETCH_RADIUS; d++){
+      if (current - d >= 0) want.add(current - d);
+      if (current + d < videos.length) want.add(current + d);
+    }
     for (const [k, r] of [...poolRef.current.entries()]){
-      if (!want.has(k) && poolRef.current.size > 3){
+      if (!want.has(k)){
         try { r.destroy?.(); } catch {}
         poolRef.current.delete(k);
       }
@@ -397,9 +483,11 @@ export default function VideoP({
 
   async function primePool(idx){
     const wants = [idx];
-    if (idx - 1 >= 0) wants.push(idx - 1);
-    if (idx + 1 < videos.length) wants.push(idx + 1);
-    await Promise.all(wants.map(i => getVideoRecord(i).catch(() => {})));
+    for (let d = 1; d <= PREFETCH_RADIUS; d++){
+      if (idx - d >= 0) wants.push(idx - d);
+      if (idx + d < videos.length) wants.push(idx + d);
+    }
+    await Promise.all(wants.map(i => getVideoRecord(i, { prefetchOnly: i !== idx }).catch(() => {})));
     setCenterTexture(idx, false);
   }
 
@@ -425,8 +513,8 @@ export default function VideoP({
     const center = centerRef.current;
     const rail = railRef.current;
 
-    // Warm incoming
-    const incoming = await getVideoRecord(nextIdx);
+    // Begin preloading incoming, but don't block on it.
+    const incomingRecPromise = getVideoRecord(nextIdx, { prefetchOnly: true }).catch(() => null);
     const currentRec = poolRef.current.get(current);
 
     // Current bounds & source pillar
@@ -435,10 +523,10 @@ export default function VideoP({
     if (!srcPillar) { animatingRef.current = false; return; }
     const fromRect = srcPillar.getBounds();
 
-    // FINAL rectangles computed for nextIdx's layout (sets mode too)
+    // FINAL rectangles for nextIdx (also sets mode)
     const finalCRect = centerRectFor(nextIdx);
-    const incSrc = incoming.texture?.source;
-    const incW = incSrc?.width || 16, incH = incSrc?.height || 9;
+    const incTexSrc = center.texture?.source; // placeholder dims until we swap
+    const incW = incTexSrc?.width || 16, incH = incTexSrc?.height || 9;
     const fitFinal = fitContain(incW, incH, Math.round(finalCRect.w), Math.round(finalCRect.h));
     const finalTarget = {
       x: Math.round(finalCRect.x + fitFinal.x),
@@ -446,26 +534,43 @@ export default function VideoP({
       w: Math.round(fitFinal.w),
       h: Math.round(fitFinal.h),
     };
-    const toRectForOutgoing = pillarRectForIndex(current, nextIdx); // current becomes a pillar in the new layout
+    const toRectForOutgoing = pillarRectForIndex(current, nextIdx);
 
-    // Remove source pillar immediately
+    // Remove source pillar immediately (prevents ghost re-appearance)
     try {
       srcPillar.parent?.removeChild(srcPillar);
       srcPillar.destroy({ children: true, texture: false, baseTexture: false });
     } catch {}
     pillarsMapRef.current.delete(nextIdx);
 
-    // Freeze the rail to prevent any single-frame redraw glitches
+    // Freeze rails for glitch-free transition
     rail.cacheAsBitmap = true;
 
-    // Animation sprites
-    const incomingSprite = new PIXI.Sprite(incoming.texture);
-    try { incomingSprite.texture.source.scaleMode = 'nearest'; } catch {}
+    // --- Incoming starts as POSTER (instant), then swaps to video when ready ---
+    const posterTex = PIXI.Texture.from(videos[nextIdx].poster);
+    try { posterTex.source.scaleMode = 'nearest'; } catch {}
+    const incomingSprite = new PIXI.Sprite(posterTex);
     incomingSprite.zIndex = 10;
     incomingSprite.x = Math.round(fromRect.x); incomingSprite.y = Math.round(fromRect.y);
     incomingSprite.width = Math.round(fromRect.width); incomingSprite.height = Math.round(fromRect.height);
     app.stage.addChild(incomingSprite);
 
+    // As soon as the real video is warm, swap the texture
+    incomingRecPromise.then((rec) => {
+      if (!rec) return;
+      const swap = () => {
+        incomingSprite.texture = rec.texture;
+        try { incomingSprite.texture.source.scaleMode = 'nearest'; } catch {}
+      };
+      const v = rec.video;
+      if (v.readyState >= 2) swap();
+      else {
+        const onData = () => { v.removeEventListener("loadeddata", onData); swap(); };
+        v.addEventListener("loadeddata", onData);
+      }
+    });
+
+    // Outgoing (center -> pillar), with pixelation ramp
     const outgoingSprite = new PIXI.Sprite(center.texture);
     try { outgoingSprite.texture.source.scaleMode = 'nearest'; } catch {}
     outgoingSprite.zIndex = 10;
@@ -480,7 +585,7 @@ export default function VideoP({
     outgoingSprite.filters = [outFilt];
     app.stage.addChild(outgoingSprite);
 
-    // Freeze underlying video during morph
+    // Hide underlying center video during morph
     center.visible = false;
     try { currentRec?.video?.pause?.(); } catch {}
 
@@ -488,24 +593,21 @@ export default function VideoP({
     const snap = { x: 1, y: 1, width: 1, height: 1 };
     const tl = gsap.timeline({ defaults: { duration: transitionMs / 1000, ease, snap }, overwrite: "auto" });
 
-    // Incoming pillar -> FINAL center box
     tl.to(incomingSprite, { x: finalTarget.x, y: finalTarget.y, width: finalTarget.w, height: finalTarget.h }, 0);
-
-    // Outgoing center -> its new pillar slot
     tl.to(outgoingSprite, {
       x: Math.round(toRectForOutgoing.x),
       y: Math.round(toRectForOutgoing.y),
       width: Math.round(toRectForOutgoing.w),
       height: Math.round(toRectForOutgoing.h),
     }, 0);
-
-    // Pixel density locks to pillar by the end
     tl.to(outFilt.uniforms, { uCols: bandCols }, 0);
 
     tl.add(() => {
-      const ticker = app.ticker; try { ticker.stop(); } catch {}
+      const appInst = appRef.current;
+      const ticker = appInst?.ticker;
+      try { ticker?.stop(); } catch {}
 
-      // Commit center to EXACT final box
+      // Commit center to exact final box
       setCenterTexture(nextIdx, true);
       const tex = center.texture?.source;
       const tW = tex?.width || 16, tH = tex?.height || 9;
@@ -513,33 +615,52 @@ export default function VideoP({
       center.scale.set(finalTarget.w / tW, finalTarget.h / tH);
       center.visible = true;
 
-      // Cleanup temp sprites
+      // If the real video wasn't ready yet when we set the center,
+      // swap it in as soon as it is (keeping size/position).
+      incomingRecPromise.then((rec) => {
+        if (!rec) return;
+        if (!centerRef.current) return;
+        // Only swap if this index is still current
+        if (nextIdx !== current) return;
+        centerRef.current.texture = rec.texture;
+        try { centerRef.current.texture.source.scaleMode = 'nearest'; } catch {}
+        // Ensure scale still matches the finalTarget
+        const src = rec.texture.source;
+        const sW = src?.width || 16, sH = src?.height || 9;
+        centerRef.current.scale.set(finalTarget.w / sW, finalTarget.h / sH);
+      });
+
+      // Clean up temp sprites
       incomingSprite.destroy({ children: true, texture: false, baseTexture: false });
       outgoingSprite.destroy({ children: true, texture: false, baseTexture: false });
 
-      // Rebuild rail for the NEW index while still paused
+      // Rebuild rails for NEW index while paused
       layoutTickRef.current++;
       layoutRailFor(nextIdx);
 
-      // Unfreeze the rail & resume
+      // Unfreeze rails, resume playback + rendering
       rail.cacheAsBitmap = false;
       const newRec = poolRef.current.get(nextIdx);
       try { newRec?.video?.play?.(); } catch {}
-      try { ticker.start(); } catch {}
+      try { ticker?.start(); } catch {}
 
       setCurrent(nextIdx);
       hoverCooldownUntilRef.current = Date.now() + hoverCooldownMs;
       animatingRef.current = false;
+
+      // 🔥 prewarm around the new current
+      prewarmAround(nextIdx);
     });
   }
 
   /* ------------------------------------------------------------------- */
+  //      <div className="videoP-bug">{activeTitle}</div>
+
 
   const activeTitle = videos[current]?.title || "";
 
   return (
     <div className="videoP-root" ref={containerRef}>
-      <div className="videoP-bug">{activeTitle}</div>
     </div>
   );
 }

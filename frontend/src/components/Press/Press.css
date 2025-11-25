@@ -48,9 +48,9 @@
   z-index: 1;
 }
 
-.press-main { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,0.35); }
+.press-main { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; box-shadow: 0 12px 36px rgba(0,0,0,0.35);}
 .press-main-link { display: block; width: 100%; height: 100%; position: relative; }
-.press-main-img { width: 100%; height: 100%; object-fit: cover; display: block; transform: translateZ(0); }
+.press-main-img { width: 100%; height: 100%; object-fit: contain; display: block; transform: translateZ(0); }
 
 .press-main-overlay {
   position: absolute; inset: 0; display: grid; place-items: center;

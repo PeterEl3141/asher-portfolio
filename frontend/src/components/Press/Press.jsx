@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./Press.css";
-import FinDivider from "./FinDivider";
+import FinDivider from "../FinDivider/FinDivider";
 import finBlack from "/images/Fin-black.png";
 
 const PRESS_ITEMS = [

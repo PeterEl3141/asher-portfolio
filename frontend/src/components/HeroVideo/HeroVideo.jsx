@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import HLSVideo from "../components/HLSVideo";
+import HLSVideo from "../HLSVideo";
+import "./HeroVideo.css";
 
 export default function HeroVideo({
   delayMs = 5000,
@@ -13,6 +14,9 @@ export default function HeroVideo({
   const [minDelayDone, setMinDelayDone] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
+
+  // reveal only controls (no scroll fading)
+  const revealFadeMs = 700; // ms
 
   // 5s title card + fail-safe
   useEffect(() => {
@@ -34,9 +38,6 @@ export default function HeroVideo({
 
   const showVideo = minDelayDone && (videoReady || timedOut);
 
-  // Transitions
-  const revealFadeMs = 700;  // title-card fade only (no scroll fading)
-
   // Ring geometry (unchanged)
   const R = 48;
   const C = 2 * Math.PI * R;
@@ -46,22 +47,20 @@ export default function HeroVideo({
       id="hero"
       data-hero
       ref={wrapRef}
-      className="relative w-screen h-screen overflow-hidden mb-[clamp(2rem,6vw,6rem)]"
+      className="hero"
+      style={{ "--revealMs": `${revealFadeMs}ms` }}
     >
       {/* 10px inset frame */}
-      <div className="absolute inset-2.5 overflow-hidden ring-1 ring-white/10 z-10">
+      <div className="hero__frame">
         {/* Video wrapper (fade in after title card) */}
-        <div
-          className="absolute inset-0 transition-opacity"
-          style={{ opacity: showVideo ? 1 : 0, transitionDuration: `${revealFadeMs}ms` }}
-        >
+        <div className={`hero__videoWrap ${showVideo ? "is-visible" : ""}`}>
           <HLSVideo
             src={hlsSrc}
             autoPlay
             muted
             playsInline
             loop
-            className="absolute inset-0 w-full h-full object-cover"
+            className="hero__video"
             onReady={() => setVideoReady(true)}
             onError={() => setTimedOut(true)}
           />
@@ -69,17 +68,12 @@ export default function HeroVideo({
 
         {/* Title card overlay (only before reveal) */}
         <div
-          className="absolute inset-0 bg-black flex items-center justify-center"
-          style={{
-            opacity: showVideo ? 0 : 1,
-            transition: `opacity ${revealFadeMs}ms linear`,
-            pointerEvents: showVideo ? "none" : "auto",
-          }}
+          className={`hero__title ${showVideo ? "is-hidden" : ""}`}
           aria-hidden={showVideo}
         >
           {!showVideo && (
             <svg
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[42vw] max-w-[760px] h-auto"
+              className="hero__ring"
               viewBox="0 0 120 120"
               aria-hidden="true"
               style={{ "--duration": `${delayMs}ms` }}
@@ -97,21 +91,13 @@ export default function HeroVideo({
         <img
           src="/images/AR.png"
           alt="Director Logo"
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2
-                     w-[28vw] max-w-[460px] h-auto
-                     mix-blend-difference pointer-events-none
-                     [filter:contrast(1.4)_saturate(2)_drop-shadow(0_8px_32px_rgba(255,255,255,0.25))]"
-          style={{ opacity: 1 }}
+          className="hero__logo"
           aria-hidden={false}
         />
       </div>
 
-      {/* Fin dock (unchanged) */}
-      <div
-        id="fin-dock"
-        className="pointer-events-none absolute left-0 bottom-0 w-full z-0"
-        style={{ height: "200px", background: "transparent" }}
-      />
+      {/* Fin dock (keep height in sync with your divider height as needed) */}
+      <div id="fin-dock" className="hero__dock" />
     </section>
   );
 }
