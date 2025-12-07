@@ -1,7 +1,7 @@
 /* Restore width vars so the image/text don't fill the viewport */
 .profile {
-  --img-w: min(33vw, 820px);
-  --text-w: var(--img-w);
+  --img-w: min(27vw, 700px);
+  --text-w: min(35vw, 850px);
   --bottom-gap: clamp(48px, 6vh, 96px);
 
   position: relative;

@@ -19,9 +19,8 @@
 
 .press-hero-word {
   position: absolute;
-  top: 80; /* (typo-safe: numbers in CSS need units, but leaving as-is to match your file) */
+  top: 240px; /* (typo-safe: numbers in CSS need units, but leaving as-is to match your file) */
   left: 50%;
-  transform: translateX(-50%);
   font-size: clamp(120px, 28vw, 250px);
   font-weight: 900;
   letter-spacing: 0.08em;

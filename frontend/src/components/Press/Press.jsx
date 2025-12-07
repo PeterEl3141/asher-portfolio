@@ -33,12 +33,12 @@ const PRESS_ITEMS = [
       "As we began building a narrative around Flo’s experiences, the concept suggested further resonances. The writing process started around the dinner table and continued late each night[...]'",
     url: "https://www.mormediacharity.org/infocus",
   },
-  { src: "/press/muwado-smallgods.png", title: "Muwado",
+  { src: "/press/instagram-smallgods.png", title: "Muwado",
     excerpt:
       "When the winners were finally announced, Uganda took home one major award and it was a pleasantly unexpected victory. Chimpaye Florence Mariserena, the lead actress in Small Gods, won Best Actress in a Leading Role (2025)[...]'",
     url: "https://muwado.com/ugandan-actress-wins-at-the-african-movie-academy-awards-2025/",
   },
-  { src: "/press/instagram-smallgods.png", title: "Cornwall Film Festival",
+  { src: "/press/muwado-smallgods.png", title: "Cornwall Film Festival",
     excerpt:
       "We’re thrilled to announce the award-winning films of this edition. Congratulations to all the incredible filmmakers whose work moved, challenged, and inspired us.[...]'",
     url: "https://www.instagram.com/p/DRalF9XjPD2/?img_index=3",
@@ -197,7 +197,7 @@ export default function Press() {
       const rect = sectionRef.current.getBoundingClientRect();
       const visible = rect.top < window.innerHeight && rect.bottom > 0;
       if (!visible) return;
-      const factor = 0.35;
+      const factor = 0.2;
       const delta = -rect.top;
       setPressY(delta * factor);
     };
@@ -231,7 +231,7 @@ export default function Press() {
       <div
         className="press-hero-word"
         aria-hidden
-        style={{ transform: `translate3d(0, ${pressY}px, 0)` }}
+        style={{ transform: `translate3d(-50%, ${pressY}px, 0)` }}
       >
         PRESS
       </div>
