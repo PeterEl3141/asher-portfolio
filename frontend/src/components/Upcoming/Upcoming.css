@@ -22,7 +22,7 @@
 /* Massive outline word (same style as PRESS) */
 .upcoming-hero-word {
   position: absolute;
-  top: 2;
+  top: 100px;
   left: clamp(20px, 7vw, 80px);
   transform: none;
   font-size: clamp(70px, 15vw, 230px);
@@ -34,7 +34,6 @@
   -webkit-text-fill-color: transparent;
   -webkit-text-stroke: 8px rgba(107, 107, 107, 0.5);
 
-
   white-space: nowrap;
   user-select: none;
   pointer-events: none;
@@ -45,38 +44,50 @@
 .upcoming-main {
   position: relative;
   width: min(70vw, 1200px);
-  aspect-ratio: 16 / 9;
   overflow: hidden;
   margin: clamp(24px, 8vh, 80px) auto 0 auto; /* centered */
 }
 
 .upcoming-main-img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  object-fit: contain;
   display: block;
   transform: translateZ(0);
 }
 
-
 .upcoming-title {
-   align-items: center;
-   font-size: 60px;
-   color: white;
-   align-self: center;
-   margin-top: 50px;
-   margin-bottom: 100px;
-   justify-self: center;
-
+  align-items: center;
+  font-size: 60px;
+  color: white;
+  align-self: center;
+  margin-top: 50px;
+  margin-bottom: 100px;
+  justify-self: center;
 }
 
+/* Video container under the main image */
+.upcoming-video-wrap {
+  position: relative;
+  width: min(70vw, 1200px);
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  margin: clamp(24px, 4vh, 40px) auto 0 auto; /* centered, sits under image */
+}
+
+/* Video element styling */
+.upcoming-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 /* Responsive */
 @media (max-width: 980px) {
-  .upcoming-main {
+  .upcoming-main,
+  .upcoming-video-wrap {
     width: 100%;
     border-radius: 14px;
   }
 }
-
-

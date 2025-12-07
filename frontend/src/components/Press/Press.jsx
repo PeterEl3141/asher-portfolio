@@ -13,7 +13,7 @@ const PRESS_ITEMS = [
     excerpt: "Feature film focuses on the landless Batwa people of Africaʼs Great Lakes Region.",
     url: "https://www.screendaily.com/news/sovereign-scala-start-production-on-africa-set-film-small-gods/5175291.article",
   },
-  { src: "/press/cesar.jpg", title: "Cesar",
+  { src: "/press/cesar.jpg", title: "César",
     excerpt:
       "Animation, documentary or fiction, the short films of Nuits en Or take you in just a few minutes from a funny or crazy universe to a dive into a breathtaking, committed or moving story.",
     url: "https://www.academie-cinema.org/evenements/les-nuits-en-or-2022/",
@@ -27,6 +27,21 @@ const PRESS_ITEMS = [
     excerpt:
       "[...] and Uganda’s Small Gods, the feature debuts of Imran Hamdulay and Asher Rosen respectively, which earned spots in the Best Film, Best Director, and the Ousmane Sembene Award for Best Film in an African Language categories, as well as Best Debut Feature.'",
     url: "https://afrocritik.com/2025-amaa-nominations-full-list/",
+  },
+  { src: "/press/cff.png", title: "CFF",
+    excerpt:
+      "As we began building a narrative around Flo’s experiences, the concept suggested further resonances. The writing process started around the dinner table and continued late each night[...]'",
+    url: "https://www.mormediacharity.org/infocus",
+  },
+  { src: "/press/muwado-smallgods.png", title: "Muwado",
+    excerpt:
+      "When the winners were finally announced, Uganda took home one major award and it was a pleasantly unexpected victory. Chimpaye Florence Mariserena, the lead actress in Small Gods, won Best Actress in a Leading Role (2025)[...]'",
+    url: "https://muwado.com/ugandan-actress-wins-at-the-african-movie-academy-awards-2025/",
+  },
+  { src: "/press/instagram-smallgods.png", title: "Cornwall Film Festival",
+    excerpt:
+      "We’re thrilled to announce the award-winning films of this edition. Congratulations to all the incredible filmmakers whose work moved, challenged, and inspired us.[...]'",
+    url: "https://www.instagram.com/p/DRalF9XjPD2/?img_index=3",
   },
 ];
 

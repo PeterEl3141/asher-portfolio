@@ -56,8 +56,7 @@ export default function App() {
     { id: "4a50ed24399ad7162a546ba7f46b0f60", poster: "/posters/SkateVid.png",         title: "SkateVid" },
     { id: "429198b947cc4dcec1dd60d50dbaca14", poster: "/posters/Sublimation.png",      title: "sublimationMusicVideo" },
     { id: "356da0bef6e3780b6aac5799ee9c78af", poster: "/posters/TakeNote.png",         title: "takeNoteMusicVideo" },
-    { id: "978d647765c28ddd2a9f62a4379411b2", poster: "/posters/Downsizing.png",       title: "downsizing" },
-    { id: "40212dc32fdd693428973dd61dbb7d9f", poster: "/posters/Discovery.png",        title: "discovery" }
+
   ];
 
 
@@ -129,7 +128,8 @@ export default function App() {
 /*
 
 <VideoPlayer videos={reels} initialIndex={0} stretchDuration={1200} />
-
+{ id: "978d647765c28ddd2a9f62a4379411b2", poster: "/posters/Downsizing.png",       title: "downsizing" },
+    { id: "40212dc32fdd693428973dd61dbb7d9f", poster: "/posters/Discovery.png",        title: "discovery" }
 
 <ARDivider
         height="150px"
