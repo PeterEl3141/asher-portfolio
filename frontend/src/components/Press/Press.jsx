@@ -4,10 +4,10 @@ import FinDivider from "../FinDivider/FinDivider";
 import finBlack from "/images/Fin-black.png";
 
 const PRESS_ITEMS = [
-  { src: "/press/filmlondon.jpg", title: "Screen Daily",
+  { src: "/press/muwado-smallgods.png", title: "Cornwall Film Festival",
     excerpt:
-      "Picturehouse is a terrific venue. It is quiet, it is contained. Just to have a chance to sit down and have a conversation with folks I didn’t have a chance to meet with in Cannes is very helpful.",
-    url: "https://www.screendaily.com/features/international-buyers-head-to-london-screenings-in-search-of-one-to-one-meetings-about-uk-films/5206311.article",
+      "We’re thrilled to announce the award-winning films of this edition. Congratulations to all the incredible filmmakers whose work moved, challenged, and inspired us.[...]'",
+    url: "https://www.instagram.com/p/DRalF9XjPD2/?img_index=3",
   },
   { src: "/press/screendaily2.png", title: "Screen Daily",
     excerpt: "Feature film focuses on the landless Batwa people of Africaʼs Great Lakes Region.",
@@ -28,7 +28,7 @@ const PRESS_ITEMS = [
       "[...] and Uganda’s Small Gods, the feature debuts of Imran Hamdulay and Asher Rosen respectively, which earned spots in the Best Film, Best Director, and the Ousmane Sembene Award for Best Film in an African Language categories, as well as Best Debut Feature.'",
     url: "https://afrocritik.com/2025-amaa-nominations-full-list/",
   },
-  { src: "/press/cff.png", title: "CFF",
+  { src: "/press/cff.png", title: "In Focus Filmmaker - Asher Rosen",
     excerpt:
       "As we began building a narrative around Flo’s experiences, the concept suggested further resonances. The writing process started around the dinner table and continued late each night[...]'",
     url: "https://www.mormediacharity.org/infocus",
@@ -38,10 +38,10 @@ const PRESS_ITEMS = [
       "When the winners were finally announced, Uganda took home one major award and it was a pleasantly unexpected victory. Chimpaye Florence Mariserena, the lead actress in Small Gods, won Best Actress in a Leading Role (2025)[...]'",
     url: "https://muwado.com/ugandan-actress-wins-at-the-african-movie-academy-awards-2025/",
   },
-  { src: "/press/muwado-smallgods.png", title: "Cornwall Film Festival",
+  { src: "/press/filmlondon.jpg", title: "Screen Daily",
     excerpt:
-      "We’re thrilled to announce the award-winning films of this edition. Congratulations to all the incredible filmmakers whose work moved, challenged, and inspired us.[...]'",
-    url: "https://www.instagram.com/p/DRalF9XjPD2/?img_index=3",
+      "Small Gods selected for Film London’s London Screenings at Picturehouse Central",
+    url: "https://www.screendaily.com/features/international-buyers-head-to-london-screenings-in-search-of-one-to-one-meetings-about-uk-films/5206311.article",
   },
 ];
 
@@ -197,7 +197,7 @@ export default function Press() {
       const rect = sectionRef.current.getBoundingClientRect();
       const visible = rect.top < window.innerHeight && rect.bottom > 0;
       if (!visible) return;
-      const factor = 0.2;
+      const factor = 0.4;
       const delta = -rect.top;
       setPressY(delta * factor);
     };

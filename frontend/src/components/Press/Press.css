@@ -19,7 +19,7 @@
 
 .press-hero-word {
   position: absolute;
-  top: 240px; /* (typo-safe: numbers in CSS need units, but leaving as-is to match your file) */
+  top: 270px; /* (typo-safe: numbers in CSS need units, but leaving as-is to match your file) */
   left: 50%;
   font-size: clamp(120px, 28vw, 250px);
   font-weight: 900;
@@ -36,6 +36,7 @@
 }
 
 .press-content {
+  padding-top: 200px;
   display: grid;
   grid-template-columns: minmax(280px, 50vw) minmax(220px, 1fr);
   gap: clamp(16px, 3vw, 48px);

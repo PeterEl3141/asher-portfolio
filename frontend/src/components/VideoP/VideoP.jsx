@@ -659,6 +659,8 @@ export default function VideoP({
 
   const activeTitle = videos[current]?.title || "";
 
+  
+
   return (
     <div className="videoP-root" ref={containerRef}>
     </div>

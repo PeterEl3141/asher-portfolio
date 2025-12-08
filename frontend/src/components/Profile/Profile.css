@@ -86,7 +86,7 @@
 
 /* When IO marks it in view, run the effect */
 .text-reveal.is-inview .text-reveal__inner {
-  animation: slice-reveal 600ms cubic-bezier(.2,.7,.2,1) both;
+  animation: slice-reveal 1000ms cubic-bezier(.2,.7,.2,1) both;
 }
 
 /* Optional: disable animation for reduced motion users */

@@ -52,6 +52,7 @@ export default function App() {
   const reels = [
     { id: "7d9cd1be2d5561193b5812f929fc3521", poster: "/posters/MukonSkate.png",       title: "MukonSkateProm_0" },
     { id: "bd0df89c371e23a5414e7727481a07e1", poster: "/posters/Rev.png",               title: "Rev" },
+    { id: "e031d306003bcb3fbb67115412d26fc1", poster: "/posters/Bellhouse.png",               title: "Bellhouse" },
     { id: "4a84b0febdf33fb8405c97aed67ab4d9", poster: "/posters/Facebook.png",         title: "facebook" },
     { id: "4a50ed24399ad7162a546ba7f46b0f60", poster: "/posters/SkateVid.png",         title: "SkateVid" },
     { id: "429198b947cc4dcec1dd60d50dbaca14", poster: "/posters/Sublimation.png",      title: "sublimationMusicVideo" },
@@ -103,7 +104,7 @@ export default function App() {
 
 <FinDividerStrip height={80} />
 
-<VideoP videos={reels} initialIndex={1} />
+<VideoP videos={reels} initialIndex={1} bandCols={4}/>
 <AwardStripWhite/>
 
 

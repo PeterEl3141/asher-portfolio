@@ -20,7 +20,7 @@ export default function Upcoming() {
       const visible = rect.top < window.innerHeight && rect.bottom > 0;
       if (!visible) return;
 
-      const factor = 0.2; // slightly slower than before so it stays visible longer
+      const factor = 0.5; // slightly slower than before so it stays visible longer
       const delta = -rect.top;
       setHeroY(delta * factor);
     };
@@ -213,7 +213,7 @@ export default function Upcoming() {
       <div
         className="upcoming-hero-word"
         aria-hidden
-        style={{ transform: `translate3d(0, ${heroY}px, 0)` }}
+        style={{ transform: `translate3d(-50%, ${heroY}px, 0)` }}
       >
         UPCOMING
       </div>
@@ -237,7 +237,6 @@ export default function Upcoming() {
         />
       </div>
 
-      <p className="upcoming-title">Small Gods</p>
     </section>
   );
 }
