@@ -4,7 +4,6 @@ dist/
 .env*
 # media
 public/clips/
-*.mp4
 *.mov
 *.mkv
 *.avi

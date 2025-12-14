@@ -1,6 +1,5 @@
-/* Restore width vars so the image/text don't fill the viewport */
 .profile {
-  --img-w: min(27vw, 700px);
+  --img-w: min(30vw, 700px);   /* desktop-ish defaults */
   --text-w: min(35vw, 850px);
   --bottom-gap: clamp(48px, 6vh, 96px);
 
@@ -14,15 +13,10 @@
   padding-bottom: clamp(32px, 5vh, 64px);
   transform: none;
   transition: none;
-  z-index: 20; /* content above hero, below our fixed z when floating */
+  z-index: 20;
 }
 
-@media (max-width: 900px) {
-  .profile { gap: 1rem; margin-block-start: 4rem; }
-  .profile-left, .profile-right { width: min(92vw, 560px); }
-}
-
-.profile-left { width: var(--img-w); }
+.profile-left  { width: var(--img-w); }
 .profile-left img { display: block; width: 100%; height: auto; object-fit: cover; }
 
 .profile-right {
@@ -31,15 +25,32 @@
   color: var(--fg, #fff);
   text-align: justify;
   text-justify: inter-word;
-  hyphens: auto; -webkit-hyphens: auto; -ms-hyphens: auto;
-  margin: 0; padding: 0;
+  hyphens: auto;
+  margin: 0;
+  padding: 0;
   font-size: 19px;
   font-family: Gruppo;
 }
 .profile-right p { margin: 0 0 1rem; }
 
-/* your text unfurl classes can stay as-is */
+/* MOBILE / TABLET OVERRIDES */
+@media (max-width: 900px) {
+  .profile {
+    gap: 1rem;
+    margin-block-start: 4rem;
 
+    /* make image + text much wider on small screens */
+    --img-w: min(80vw, 560px);
+    --text-w: min(90vw, 560px);
+  }
+
+  /* optional: justified text looks bad in a narrow column; relax it */
+  .profile-right {
+    text-align: left;
+    text-justify: auto;
+    hyphens: none;
+  }
+}
 
 
 
@@ -48,18 +59,17 @@
   z-index: 20;
 
   /* pull the profile UP into the fin region */
-  margin-top: -600px;  /* tune this by eye */
+  margin-top: 0;  /* tune this by eye */
   padding-top: 2rem;   /* just a little breathing room, optional */
 }
 
 /* On smaller screens we don't do the overlap at all */
-@media (max-width: 900px) {
+@media (min-width: 1024px) {
   .lift-after-hero {
-    margin-top: 0;
-    padding-top: 0;
+    margin-top: -600px;  /* tune this by eye */
+    padding-top: 2rem;   /* breathing room */
   }
 }
-
 
 /* --- text unfurl: slice-reveal animation --- */
 

@@ -233,7 +233,7 @@ export default function Press() {
         aria-hidden
         style={{ transform: `translate3d(-50%, ${pressY}px, 0)` }}
       >
-        PRESS
+        
       </div>
 
       <div className="press-content">

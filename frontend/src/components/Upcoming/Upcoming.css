@@ -9,6 +9,7 @@
   padding-right: clamp(20px, 7vw, 80px);
   padding-bottom: clamp(72px, 10vw, 160px);
   padding-left: clamp(20px, 7vw, 80px);
+  margin-bottom: 200px;
   box-sizing: border-box;
   overflow: visible;
   z-index: 1;                            /* paint above previous section */
@@ -82,6 +83,7 @@
   height: 100%;
   object-fit: cover;
   display: block;
+  margin-bottom: 200px;
 }
 
 /* Responsive */

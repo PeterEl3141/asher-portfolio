@@ -6,7 +6,7 @@
   height: var(--hero-h);
   overflow: hidden;
   /* Mobile/tablet can keep some spacing; desktop removes it below */
-  margin-bottom: 0;
+  margin-bottom: 5rem;
   z-index: 2;
 }
 

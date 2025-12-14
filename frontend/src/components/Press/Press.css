@@ -6,7 +6,7 @@
   width: 100%;
   min-height: 120vh;
   padding: clamp(64px, 8vw, 128px) clamp(16px, 6vw, 64px);
-  padding-top: 300px;
+  padding-top: 100px;
   padding-bottom: 180px;
   box-sizing: border-box;
   background: var(black);
@@ -19,7 +19,7 @@
 
 .press-hero-word {
   position: absolute;
-  top: 270px; /* (typo-safe: numbers in CSS need units, but leaving as-is to match your file) */
+  top: 100px; /* (typo-safe: numbers in CSS need units, but leaving as-is to match your file) */
   left: 50%;
   font-size: clamp(120px, 28vw, 250px);
   font-weight: 900;
