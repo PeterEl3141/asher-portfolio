@@ -42,3 +42,8 @@
     .videoP-root { --stage-height: 78vh; }
   }
   
+
+  .videoP-root,
+.videoP-canvas {
+  touch-action: pan-y; /* allow vertical scroll gestures */
+}

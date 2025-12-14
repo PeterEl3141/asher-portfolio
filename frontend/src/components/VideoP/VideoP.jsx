@@ -10,6 +10,15 @@ import "./VideoP.css";
 
 const hlsSrc = (id) => `https://videodelivery.net/${id}/manifest/video.m3u8`;
 
+function isCoarsePointer() {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  try {
+    return window.matchMedia("(pointer: coarse)").matches;
+  } catch {
+    return false;
+  }
+}
+
 /** Crisp pixelation via cell-center sampling (v8-safe) */
 class PixelateColsFilter extends PIXI.Filter {
   constructor(cols = 8, aspect = 1, sat = 1.15) {
@@ -38,17 +47,20 @@ class PixelateColsFilter extends PIXI.Filter {
   }
 }
 
-function fitContain(texW, texH, boxW, boxH){
+function fitContain(texW, texH, boxW, boxH) {
   const rS = texW / Math.max(1, texH);
   const rB = boxW / Math.max(1, boxH);
-  let w = boxW, h = boxH;
-  if (rS > rB) h = boxW / rS; else w = boxH * rS;
-  const x = (boxW - w) * 0.5, y = (boxH - h) * 0.5;
+  let w = boxW,
+    h = boxH;
+  if (rS > rB) h = boxW / rS;
+  else w = boxH * rS;
+  const x = (boxW - w) * 0.5,
+    y = (boxH - h) * 0.5;
   return { x, y, w, h, scaleX: w / texW, scaleY: h / texH };
 }
 
 /** HLS-backed <video> → Pixi Texture (robust looping with hls.js preferred) */
-async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
+async function createStreamVideo(id, { autoplay = true, muted = true } = {}) {
   const el = document.createElement("video");
   el.playsInline = true;
   el.muted = muted;
@@ -65,8 +77,18 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
   let lastCT = 0;
 
   const seekableStart = () => {
-    const s = el.seekable; if (s && s.length) { try { return s.start(0); } catch {} }
-    const b = el.buffered; if (b && b.length) { try { return b.start(0); } catch {} }
+    const s = el.seekable;
+    if (s && s.length) {
+      try {
+        return s.start(0);
+      } catch {}
+    }
+    const b = el.buffered;
+    if (b && b.length) {
+      try {
+        return b.start(0);
+      } catch {}
+    }
     return 0;
   };
 
@@ -74,14 +96,21 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
     try {
       const start = seekableStart() + 0.03;
       if (hls) {
-        try { hls.stopLoad(); } catch {}
-        try { hls.startLoad(0); } catch {}
+        try {
+          hls.stopLoad();
+        } catch {}
+        try {
+          hls.startLoad(0);
+        } catch {}
       } else {
         el.src = "";
-        setTimeout(() => { el.src = src; }, 0);
+        setTimeout(() => {
+          el.src = src;
+        }, 0);
       }
       el.currentTime = start;
-      const p = el.play(); if (p && typeof p.catch === "function") p.catch(() => {});
+      const p = el.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
     } catch {}
   };
 
@@ -96,13 +125,22 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
     hb = setInterval(() => {
       const notAdvancing = Math.abs(el.currentTime - lastCT) < 0.01;
       lastCT = el.currentTime;
-      if ((Number.isFinite(vodDuration) && vodDuration - el.currentTime <= 0.5) ||
-          el.ended || (notAdvancing && el.currentTime > 0)) {
+      if (
+        (Number.isFinite(vodDuration) &&
+          vodDuration - el.currentTime <= 0.5) ||
+        el.ended ||
+        (notAdvancing && el.currentTime > 0)
+      ) {
         restartFromStart();
       }
     }, 350);
   };
-  const stopHeartbeat = () => { if (hb) { clearInterval(hb); hb = null; } };
+  const stopHeartbeat = () => {
+    if (hb) {
+      clearInterval(hb);
+      hb = null;
+    }
+  };
 
   await new Promise((resolve, reject) => {
     const ok = () => {
@@ -123,7 +161,9 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
         }
       });
       hls.on(Hls.Events.MANIFEST_PARSED, ok);
-      hls.on(Hls.Events.ERROR, (_evt, data) => { if (data?.fatal) fail(); });
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        if (data?.fatal) fail();
+      });
     } else {
       el.src = src;
       el.addEventListener("loadedmetadata", ok, { once: true });
@@ -131,17 +171,29 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}){
     }
   });
 
-  try { if (autoplay) await el.play(); } catch {}
+  try {
+    if (autoplay) await el.play();
+  } catch {}
 
   const texture = PIXI.Texture.from(el);
-  try { texture.source.scaleMode = 'nearest'; } catch {}
+  try {
+    texture.source.scaleMode = "nearest";
+  } catch {}
 
   const destroy = () => {
-    try { el.removeEventListener("timeupdate", onTimeupdate); } catch {}
+    try {
+      el.removeEventListener("timeupdate", onTimeupdate);
+    } catch {}
     stopHeartbeat();
-    try { hls?.destroy?.(); } catch {}
-    try { el.pause?.(); } catch {}
-    try { el.src = ""; } catch {}
+    try {
+      hls?.destroy?.();
+    } catch {}
+    try {
+      el.pause?.();
+    } catch {}
+    try {
+      el.src = "";
+    } catch {}
   };
 
   return { video: el, texture, destroy, hls };
@@ -161,54 +213,100 @@ export default function VideoP({
   hoverDelayMs = 140,
   hoverCooldownMs = 220,
   stackAt = 900,
-}){
+}) {
   const containerRef = useRef(null);
   const appRef = useRef(null);
 
   const [current, setCurrent] = useState(
     Math.min(Math.max(initialIndex, 0), Math.max(videos.length - 1, 0))
   );
+  const currentRef = useRef(current);
+  useEffect(() => {
+    currentRef.current = current;
+  }, [current]);
 
-  const poolRef = useRef(new Map());               // idx -> { video, texture, destroy, hls }
+  const poolRef = useRef(new Map()); // idx -> { video, texture, destroy, hls }
   const animatingRef = useRef(false);
 
   const centerRef = useRef(null);
-  const railRef   = useRef(null);
-  const roRef     = useRef(null);
+  const railRef = useRef(null);
+  const roRef = useRef(null);
   const pillarsMapRef = useRef(new Map());
 
   const layoutModeRef = useRef("h");
 
   const hoverTimerRef = useRef(null);
-  const hoverIdxRef   = useRef(null);
+  const hoverIdxRef = useRef(null);
   const hoverCooldownUntilRef = useRef(0);
   const layoutTickRef = useRef(0);
 
   // ---- prefetch knobs ----
-  const PREFETCH_RADIUS = 2;
-  async function prewarmIdx(i){
+  // (2) bump to 3, as requested
+  const PREFETCH_RADIUS = 3;
+
+  // (3) if something isn't ready yet, make sure it plays as soon as it CAN
+  function ensurePlayWhenReady(video) {
+    if (!video) return;
+    const tryPlay = () => {
+      try {
+        const p = video.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch {}
+    };
+
+    // If already has enough data, try immediately
+    if (video.readyState >= 3) {
+      tryPlay();
+      return;
+    }
+
+    // Otherwise, try again when it becomes playable
+    const onReady = () => {
+      video.removeEventListener("canplay", onReady);
+      video.removeEventListener("loadeddata", onReady);
+      tryPlay();
+    };
+    video.addEventListener("canplay", onReady);
+    video.addEventListener("loadeddata", onReady);
+  }
+
+  async function prewarmIdx(i) {
     if (i < 0 || i >= videos.length) return;
     if (poolRef.current.has(i)) return;
     try {
       const rec = await getVideoRecord(i, { prefetchOnly: true });
       // tiny play->pause helps decode first frame, then sit ready
-      try { await rec.video.play(); rec.video.pause(); } catch {}
-      try { rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001); } catch {}
+      try {
+        await rec.video.play();
+        rec.video.pause();
+      } catch {}
+      try {
+        rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001);
+      } catch {}
     } catch {}
   }
-  function prewarmAround(idx){
-    for (let d = 1; d <= PREFETCH_RADIUS; d++){
+
+  function prewarmAround(idx) {
+    for (let d = 1; d <= PREFETCH_RADIUS; d++) {
       prewarmIdx(idx - d);
       prewarmIdx(idx + d);
     }
   }
 
-  const posterURLs = useMemo(() => videos.map(v => v.poster).filter(Boolean), [videos]);
-  useMemo(() => videos.map(v => {
-    const t = PIXI.Texture.from(v.poster);
-    try { t.source.scaleMode = 'nearest'; } catch {}
-    return t;
-  }), [videos]);
+  const posterURLs = useMemo(
+    () => videos.map((v) => v.poster).filter(Boolean),
+    [videos]
+  );
+
+  useMemo(() => {
+    videos.map((v) => {
+      const t = PIXI.Texture.from(v.poster);
+      try {
+        t.source.scaleMode = "nearest";
+      } catch {}
+      return t;
+    });
+  }, [videos]);
 
   /* ----------------------------- Mount -------------------------------- */
 
@@ -223,23 +321,45 @@ export default function VideoP({
       const h = Math.max(1, Math.round(el.clientHeight));
 
       await app.init({
-        width: w, height: h,
+        width: w,
+        height: h,
         antialias: false,
         powerPreference: "high-performance",
         background: 0xffffff,
         backgroundAlpha: 1,
         hello: false,
       });
-      if (disposed) { try { app.destroy(true); } catch {} return; }
+
+      // (1) touchscreen scroll: don't prevent default + allow browser panning
+      if (app.renderer?.events) {
+        app.renderer.events.autoPreventDefault = false;
+      }
+
+      if (disposed) {
+        try {
+          app.destroy(true);
+        } catch {}
+        return;
+      }
 
       appRef.current = app;
       el.appendChild(app.canvas);
       app.canvas.classList.add("videoP-canvas");
 
-      try { PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.OFF; } catch {}
+      // help mobile scrolling (browser gesture hints)
+      try {
+        el.style.touchAction = "pan-y pinch-zoom";
+        app.canvas.style.touchAction = "pan-y pinch-zoom";
+      } catch {}
+
+      try {
+        PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.OFF;
+      } catch {}
       app.stage.sortableChildren = true;
 
-      try { if (posterURLs.length) await Assets.load(posterURLs); } catch {}
+      try {
+        if (posterURLs.length) await Assets.load(posterURLs);
+      } catch {}
 
       buildStage();
       layoutAll();
@@ -247,7 +367,7 @@ export default function VideoP({
       centerRef.current.zIndex = 5;
       railRef.current.zIndex = 0;
 
-      // 🔥 prewarm neighbors right away
+      // prewarm neighbors right away
       prewarmAround(current);
 
       const ro = new ResizeObserver(() => {
@@ -262,11 +382,23 @@ export default function VideoP({
     })();
 
     return () => {
-      try { roRef.current?.disconnect?.(); } catch {}
+      try {
+        roRef.current?.disconnect?.();
+      } catch {}
       cancelHoverTimer();
-      for (const [, rec] of poolRef.current) { try { rec.destroy?.(); } catch {} }
+      for (const [, rec] of poolRef.current) {
+        try {
+          rec.destroy?.();
+        } catch {}
+      }
       poolRef.current.clear();
-      try { appRef.current?.destroy(true, { children: true, texture: true, baseTexture: true }); } catch {}
+      try {
+        appRef.current?.destroy(true, {
+          children: true,
+          texture: true,
+          baseTexture: true,
+        });
+      } catch {}
       appRef.current = null;
       disposed = true;
     };
@@ -278,11 +410,20 @@ export default function VideoP({
     layoutAll();
     primePool(current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current, videos.length, bandWidth, bandGap, bandCols, innerGap, pillarSaturation, stackAt]);
+  }, [
+    current,
+    videos.length,
+    bandWidth,
+    bandGap,
+    bandCols,
+    innerGap,
+    pillarSaturation,
+    stackAt,
+  ]);
 
   /* ---------------------------- Layout -------------------------------- */
 
-  function buildStage(){
+  function buildStage() {
     const app = appRef.current;
     app.stage.removeChildren();
 
@@ -298,52 +439,52 @@ export default function VideoP({
     app.stage.addChild(rail);
   }
 
-  function stageBox(){
+  function stageBox() {
     const el = containerRef.current;
     const r = el.getBoundingClientRect();
     return { w: Math.round(r.width), h: Math.round(r.height) };
   }
 
-  function centerRectFor(cur){
+  function centerRectFor(cur) {
     const { w, h } = stageBox();
     const vertical = w <= stackAt;
     layoutModeRef.current = vertical ? "v" : "h";
 
-    if (!vertical){
-      const left  = Math.max(0, cur);
+    if (!vertical) {
+      const left = Math.max(0, cur);
       const right = Math.max(0, videos.length - cur - 1);
-      const span  = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
-      const leftW  = span(left)  + (left  > 0 ? innerGap : 0);
+      const span = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
+      const leftW = span(left) + (left > 0 ? innerGap : 0);
       const rightW = span(right) + (right > 0 ? innerGap : 0);
       const cx = leftW;
       const cw = Math.max(0, w - leftW - rightW);
       return { x: cx, y: 0, w: cw, h };
     }
 
-    const top    = Math.max(0, cur);
+    const top = Math.max(0, cur);
     const bottom = Math.max(0, videos.length - cur - 1);
-    const spanV  = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
-    const topH    = spanV(top)    + (top    > 0 ? innerGap : 0);
+    const spanV = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
+    const topH = spanV(top) + (top > 0 ? innerGap : 0);
     const bottomH = spanV(bottom) + (bottom > 0 ? innerGap : 0);
     const cy = topH;
     const ch = Math.max(0, h - topH - bottomH);
     return { x: 0, y: cy, w, h: ch };
   }
 
-  function pillarRectForIndex(idx, cur){
+  function pillarRectForIndex(idx, cur) {
     const { w, h } = stageBox();
     const mode = layoutModeRef.current;
     const cRect = centerRectFor(cur);
 
-    if (mode === "h"){
+    if (mode === "h") {
       const span = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
-      if (idx < cur){
+      if (idx < cur) {
         const pos = idx;
         const leftRailWidth = span(cur);
         const startX = cRect.x - (leftRailWidth + (cur > 0 ? innerGap : 0));
         const x = startX + pos * (bandWidth + bandGap);
         return { x: Math.round(x), y: 0, w: bandWidth, h };
-      } else if (idx > cur){
+      } else if (idx > cur) {
         const pos = idx - cur - 1;
         const startX = cRect.x + cRect.w + (cRect.w > 0 ? innerGap : 0);
         const x = startX + pos * (bandWidth + bandGap);
@@ -352,15 +493,14 @@ export default function VideoP({
       return null;
     }
 
-    // Vertical mode: top / bottom rails
     const spanV = (n) => (n <= 0 ? 0 : n * bandWidth + (n - 1) * bandGap);
-    if (idx < cur){
+    if (idx < cur) {
       const pos = idx;
       const topRailHeight = spanV(cur);
       const startY = cRect.y - (topRailHeight + (cur > 0 ? innerGap : 0));
       const y = startY + pos * (bandWidth + bandGap);
       return { x: 0, y: Math.round(y), w, h: bandWidth };
-    } else if (idx > cur){
+    } else if (idx > cur) {
       const pos = idx - cur - 1;
       const startY = cRect.y + cRect.h + (cRect.h > 0 ? innerGap : 0);
       const y = startY + pos * (bandWidth + bandGap);
@@ -369,20 +509,27 @@ export default function VideoP({
     return null;
   }
 
-  function layoutRailFor(cur){
+  function layoutRailFor(cur) {
     const rail = railRef.current;
     if (!rail) return;
     rail.removeChildren();
     pillarsMapRef.current.clear();
 
+    const coarse = isCoarsePointer(); // touch devices: don't hover-switch
+
     const buildPillar = (i) => {
       const r = pillarRectForIndex(i, cur);
       const sprite = PIXI.Sprite.from(videos[i].poster);
-      try { sprite.texture.source.scaleMode = 'nearest'; } catch {}
+      try {
+        sprite.texture.source.scaleMode = "nearest";
+      } catch {}
       sprite.eventMode = "static";
       sprite.cursor = "pointer";
       sprite.alpha = 0.99;
-      sprite.x = r.x; sprite.y = r.y; sprite.width = r.w; sprite.height = r.h;
+      sprite.x = r.x;
+      sprite.y = r.y;
+      sprite.width = r.w;
+      sprite.height = r.h;
 
       const filt = new PixelateColsFilter(
         bandCols,
@@ -391,19 +538,25 @@ export default function VideoP({
       );
       sprite.filters = [filt];
 
-      // hover intent + prewarm
-      sprite.on("pointerenter", () => {
-        if (animatingRef.current) return;
-        if (Date.now() < hoverCooldownUntilRef.current) return;
-        prewarmIdx(i); // 🔥 warm this target immediately
-        hoverIdxRef.current = i;
-        startHoverTimer(i, layoutTickRef.current);
-      });
-      sprite.on("pointerleave", () => {
-        if (hoverIdxRef.current === i) hoverIdxRef.current = null;
-        cancelHoverTimer();
-      });
-      // tap (mobile/desktop click)
+      // hover intent + prewarm (desktop only)
+      if (!coarse) {
+        sprite.on("pointerenter", () => {
+          if (animatingRef.current) return;
+          if (Date.now() < hoverCooldownUntilRef.current) return;
+
+          prewarmIdx(i); // warm this target immediately
+
+          hoverIdxRef.current = i;
+          startHoverTimer(i, layoutTickRef.current);
+        });
+
+        sprite.on("pointerleave", () => {
+          if (hoverIdxRef.current === i) hoverIdxRef.current = null;
+          cancelHoverTimer();
+        });
+      }
+
+      // tap/click always works
       sprite.on("pointertap", () => {
         if (animatingRef.current) return;
         if (Date.now() < hoverCooldownUntilRef.current) return;
@@ -418,7 +571,7 @@ export default function VideoP({
     for (let i = cur + 1; i < videos.length; i++) buildPillar(i);
   }
 
-  function layoutAll(){
+  function layoutAll() {
     const app = appRef.current;
     const center = centerRef.current;
     const rail = railRef.current;
@@ -428,9 +581,13 @@ export default function VideoP({
 
     const cRect = centerRectFor(current);
     const tex = center.texture?.source;
-    const tW = tex?.width || 16, tH = tex?.height || 9;
+    const tW = tex?.width || 16,
+      tH = tex?.height || 9;
     const fit = fitContain(tW, tH, Math.round(cRect.w), Math.round(cRect.h));
-    center.position.set(Math.round(cRect.x + fit.x), Math.round(cRect.y + fit.y));
+    center.position.set(
+      Math.round(cRect.x + fit.x),
+      Math.round(cRect.y + fit.y)
+    );
     center.scale.set(fit.scaleX, fit.scaleY);
 
     layoutRailFor(current);
@@ -438,7 +595,7 @@ export default function VideoP({
 
   /* ----------------------- Hover Intent (safe) ------------------------ */
 
-  function startHoverTimer(i, tickAtStart){
+  function startHoverTimer(i, tickAtStart) {
     cancelHoverTimer();
     hoverTimerRef.current = setTimeout(() => {
       if (tickAtStart !== layoutTickRef.current) return;
@@ -448,61 +605,85 @@ export default function VideoP({
       trySwitch(i);
     }, hoverDelayMs);
   }
-  function cancelHoverTimer(){
-    if (hoverTimerRef.current) { clearTimeout(hoverTimerRef.current); hoverTimerRef.current = null; }
+
+  function cancelHoverTimer() {
+    if (hoverTimerRef.current) {
+      clearTimeout(hoverTimerRef.current);
+      hoverTimerRef.current = null;
+    }
   }
 
   /* ---------------------------- Pooling ------------------------------- */
 
-  async function getVideoRecord(idx, { prefetchOnly = false } = {}){
+  async function getVideoRecord(idx, { prefetchOnly = false } = {}) {
     if (poolRef.current.has(idx)) return poolRef.current.get(idx);
 
     // Always create the media pipeline; for prefetch we'll pause it right after
-    const rec = await createStreamVideo(videos[idx].id, { autoplay: true, muted: true });
+    const rec = await createStreamVideo(videos[idx].id, {
+      autoplay: true,
+      muted: true,
+    });
     poolRef.current.set(idx, rec);
 
     if (prefetchOnly) {
-      try { await rec.video.play(); rec.video.pause(); } catch {}
-      try { rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001); } catch {}
+      try {
+        await rec.video.play();
+        rec.video.pause();
+      } catch {}
+      try {
+        rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001);
+      } catch {}
     }
 
-    // Keep only current ± PREFETCH_RADIUS
-    const want = new Set([current]);
-    for (let d = 1; d <= PREFETCH_RADIUS; d++){
-      if (current - d >= 0) want.add(current - d);
-      if (current + d < videos.length) want.add(current + d);
+    // IMPORTANT MINIMAL FIX:
+    // Keep only (current ± radius) BUT always keep the record we just requested (idx)
+    const want = new Set([currentRef.current, idx]);
+    for (let d = 1; d <= PREFETCH_RADIUS; d++) {
+      if (currentRef.current - d >= 0) want.add(currentRef.current - d);
+      if (currentRef.current + d < videos.length)
+        want.add(currentRef.current + d);
     }
-    for (const [k, r] of [...poolRef.current.entries()]){
-      if (!want.has(k)){
-        try { r.destroy?.(); } catch {}
+
+    for (const [k, r] of [...poolRef.current.entries()]) {
+      if (!want.has(k)) {
+        try {
+          r.destroy?.();
+        } catch {}
         poolRef.current.delete(k);
       }
     }
+
     return rec;
   }
 
-  async function primePool(idx){
+  async function primePool(idx) {
     const wants = [idx];
-    for (let d = 1; d <= PREFETCH_RADIUS; d++){
+    for (let d = 1; d <= PREFETCH_RADIUS; d++) {
       if (idx - d >= 0) wants.push(idx - d);
       if (idx + d < videos.length) wants.push(idx + d);
     }
-    await Promise.all(wants.map(i => getVideoRecord(i, { prefetchOnly: i !== idx }).catch(() => {})));
+    await Promise.all(
+      wants.map((i) =>
+        getVideoRecord(i, { prefetchOnly: i !== idx }).catch(() => {})
+      )
+    );
     setCenterTexture(idx, false);
   }
 
-  function setCenterTexture(idx, skipLayout = false){
+  function setCenterTexture(idx, skipLayout = false) {
     const center = centerRef.current;
     const rec = poolRef.current.get(idx);
-    center.texture = rec?.texture || (PIXI.Texture.from(videos[idx].poster));
-    try { center.texture.source.scaleMode = 'nearest'; } catch {}
+    center.texture = rec?.texture || PIXI.Texture.from(videos[idx].poster);
+    try {
+      center.texture.source.scaleMode = "nearest";
+    } catch {}
     if (!skipLayout) layoutAll();
   }
 
   /* --------------------------- Transition ----------------------------- */
 
-  async function trySwitch(nextIdx){
-    if (animatingRef.current || nextIdx === current) return;
+  async function trySwitch(nextIdx) {
+    if (animatingRef.current || nextIdx === currentRef.current) return;
     if (!centerRef.current || !railRef.current) return;
 
     animatingRef.current = true;
@@ -513,28 +694,41 @@ export default function VideoP({
     const center = centerRef.current;
     const rail = railRef.current;
 
+    const prevIdx = currentRef.current;
+
     // Begin preloading incoming, but don't block on it.
-    const incomingRecPromise = getVideoRecord(nextIdx, { prefetchOnly: true }).catch(() => null);
-    const currentRec = poolRef.current.get(current);
+    const incomingRecPromise = getVideoRecord(nextIdx, {
+      prefetchOnly: true,
+    }).catch(() => null);
+    const currentRec = poolRef.current.get(prevIdx);
 
     // Current bounds & source pillar
     const cRectNow = center.getBounds();
     const srcPillar = pillarsMapRef.current.get(nextIdx);
-    if (!srcPillar) { animatingRef.current = false; return; }
+    if (!srcPillar) {
+      animatingRef.current = false;
+      return;
+    }
     const fromRect = srcPillar.getBounds();
 
     // FINAL rectangles for nextIdx (also sets mode)
     const finalCRect = centerRectFor(nextIdx);
     const incTexSrc = center.texture?.source; // placeholder dims until we swap
-    const incW = incTexSrc?.width || 16, incH = incTexSrc?.height || 9;
-    const fitFinal = fitContain(incW, incH, Math.round(finalCRect.w), Math.round(finalCRect.h));
+    const incW = incTexSrc?.width || 16,
+      incH = incTexSrc?.height || 9;
+    const fitFinal = fitContain(
+      incW,
+      incH,
+      Math.round(finalCRect.w),
+      Math.round(finalCRect.h)
+    );
     const finalTarget = {
       x: Math.round(finalCRect.x + fitFinal.x),
       y: Math.round(finalCRect.y + fitFinal.y),
       w: Math.round(fitFinal.w),
       h: Math.round(fitFinal.h),
     };
-    const toRectForOutgoing = pillarRectForIndex(current, nextIdx);
+    const toRectForOutgoing = pillarRectForIndex(prevIdx, nextIdx);
 
     // Remove source pillar immediately (prevents ghost re-appearance)
     try {
@@ -548,35 +742,53 @@ export default function VideoP({
 
     // --- Incoming starts as POSTER (instant), then swaps to video when ready ---
     const posterTex = PIXI.Texture.from(videos[nextIdx].poster);
-    try { posterTex.source.scaleMode = 'nearest'; } catch {}
+    try {
+      posterTex.source.scaleMode = "nearest";
+    } catch {}
     const incomingSprite = new PIXI.Sprite(posterTex);
     incomingSprite.zIndex = 10;
-    incomingSprite.x = Math.round(fromRect.x); incomingSprite.y = Math.round(fromRect.y);
-    incomingSprite.width = Math.round(fromRect.width); incomingSprite.height = Math.round(fromRect.height);
+    incomingSprite.x = Math.round(fromRect.x);
+    incomingSprite.y = Math.round(fromRect.y);
+    incomingSprite.width = Math.round(fromRect.width);
+    incomingSprite.height = Math.round(fromRect.height);
     app.stage.addChild(incomingSprite);
 
-    // As soon as the real video is warm, swap the texture
+    // As soon as the real video is warm, swap the texture on the incoming sprite
     incomingRecPromise.then((rec) => {
       if (!rec) return;
       const swap = () => {
         incomingSprite.texture = rec.texture;
-        try { incomingSprite.texture.source.scaleMode = 'nearest'; } catch {}
+        try {
+          incomingSprite.texture.source.scaleMode = "nearest";
+        } catch {}
       };
       const v = rec.video;
       if (v.readyState >= 2) swap();
       else {
-        const onData = () => { v.removeEventListener("loadeddata", onData); swap(); };
+        const onData = () => {
+          v.removeEventListener("loadeddata", onData);
+          swap();
+        };
         v.addEventListener("loadeddata", onData);
       }
     });
 
     // Outgoing (center -> pillar), with pixelation ramp
     const outgoingSprite = new PIXI.Sprite(center.texture);
-    try { outgoingSprite.texture.source.scaleMode = 'nearest'; } catch {}
+    try {
+      outgoingSprite.texture.source.scaleMode = "nearest";
+    } catch {}
     outgoingSprite.zIndex = 10;
-    outgoingSprite.x = Math.round(cRectNow.x); outgoingSprite.y = Math.round(cRectNow.y);
-    outgoingSprite.width = Math.round(cRectNow.width); outgoingSprite.height = Math.round(cRectNow.height);
-    const startCols = Math.max(12, Math.round((layoutModeRef.current === "h" ? cRectNow.width : cRectNow.height) / 28));
+    outgoingSprite.x = Math.round(cRectNow.x);
+    outgoingSprite.y = Math.round(cRectNow.y);
+    outgoingSprite.width = Math.round(cRectNow.width);
+    outgoingSprite.height = Math.round(cRectNow.height);
+    const startCols = Math.max(
+      12,
+      Math.round(
+        (layoutModeRef.current === "h" ? cRectNow.width : cRectNow.height) / 28
+      )
+    );
     const outFilt = new PixelateColsFilter(
       startCols,
       outgoingSprite.height / Math.max(1, outgoingSprite.width),
@@ -587,48 +799,49 @@ export default function VideoP({
 
     // Hide underlying center video during morph
     center.visible = false;
-    try { currentRec?.video?.pause?.(); } catch {}
+    try {
+      currentRec?.video?.pause?.();
+    } catch {}
 
     const ease = "cubic-bezier(.22,1,.36,1)";
     const snap = { x: 1, y: 1, width: 1, height: 1 };
-    const tl = gsap.timeline({ defaults: { duration: transitionMs / 1000, ease, snap }, overwrite: "auto" });
+    const tl = gsap.timeline({
+      defaults: { duration: transitionMs / 1000, ease, snap },
+      overwrite: "auto",
+    });
 
-    tl.to(incomingSprite, { x: finalTarget.x, y: finalTarget.y, width: finalTarget.w, height: finalTarget.h }, 0);
-    tl.to(outgoingSprite, {
-      x: Math.round(toRectForOutgoing.x),
-      y: Math.round(toRectForOutgoing.y),
-      width: Math.round(toRectForOutgoing.w),
-      height: Math.round(toRectForOutgoing.h),
-    }, 0);
+    tl.to(
+      incomingSprite,
+      { x: finalTarget.x, y: finalTarget.y, width: finalTarget.w, height: finalTarget.h },
+      0
+    );
+    tl.to(
+      outgoingSprite,
+      {
+        x: Math.round(toRectForOutgoing.x),
+        y: Math.round(toRectForOutgoing.y),
+        width: Math.round(toRectForOutgoing.w),
+        height: Math.round(toRectForOutgoing.h),
+      },
+      0
+    );
     tl.to(outFilt.uniforms, { uCols: bandCols }, 0);
 
     tl.add(() => {
       const appInst = appRef.current;
       const ticker = appInst?.ticker;
-      try { ticker?.stop(); } catch {}
+      try {
+        ticker?.stop();
+      } catch {}
 
       // Commit center to exact final box
       setCenterTexture(nextIdx, true);
       const tex = center.texture?.source;
-      const tW = tex?.width || 16, tH = tex?.height || 9;
+      const tW = tex?.width || 16,
+        tH = tex?.height || 9;
       center.position.set(finalTarget.x, finalTarget.y);
       center.scale.set(finalTarget.w / tW, finalTarget.h / tH);
       center.visible = true;
-
-      // If the real video wasn't ready yet when we set the center,
-      // swap it in as soon as it is (keeping size/position).
-      incomingRecPromise.then((rec) => {
-        if (!rec) return;
-        if (!centerRef.current) return;
-        // Only swap if this index is still current
-        if (nextIdx !== current) return;
-        centerRef.current.texture = rec.texture;
-        try { centerRef.current.texture.source.scaleMode = 'nearest'; } catch {}
-        // Ensure scale still matches the finalTarget
-        const src = rec.texture.source;
-        const sW = src?.width || 16, sH = src?.height || 9;
-        centerRef.current.scale.set(finalTarget.w / sW, finalTarget.h / sH);
-      });
 
       // Clean up temp sprites
       incomingSprite.destroy({ children: true, texture: false, baseTexture: false });
@@ -640,29 +853,32 @@ export default function VideoP({
 
       // Unfreeze rails, resume playback + rendering
       rail.cacheAsBitmap = false;
+
       const newRec = poolRef.current.get(nextIdx);
-      try { newRec?.video?.play?.(); } catch {}
-      try { ticker?.start(); } catch {}
+      try {
+        newRec?.video?.play?.();
+      } catch {}
+      // If it wasn't ready yet, this guarantees it will start once it is:
+      ensurePlayWhenReady(newRec?.video);
+
+      try {
+        ticker?.start();
+      } catch {}
 
       setCurrent(nextIdx);
+      currentRef.current = nextIdx; // keep ref in sync immediately
+
       hoverCooldownUntilRef.current = Date.now() + hoverCooldownMs;
       animatingRef.current = false;
 
-      // 🔥 prewarm around the new current
+      // prewarm around the new current
       prewarmAround(nextIdx);
     });
   }
 
   /* ------------------------------------------------------------------- */
-  //      <div className="videoP-bug">{activeTitle}</div>
-
 
   const activeTitle = videos[current]?.title || "";
 
-  
-
-  return (
-    <div className="videoP-root" ref={containerRef}>
-    </div>
-  );
+  return <div className="videoP-root" ref={containerRef}></div>;
 }
