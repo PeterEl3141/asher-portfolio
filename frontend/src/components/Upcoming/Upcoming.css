@@ -24,9 +24,8 @@
 .upcoming-hero-word {
   position: absolute;
   padding-top: 80px;
-  top: 250px;      /* adjust for vertical position */
-  left: 50%;       /* anchor in the middle */
-  /* remove any transform here */
+  top: 250px;
+  left: 50%;
   font-size: clamp(70px, 15vw, 230px);
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -38,6 +37,11 @@
   user-select: none;
   pointer-events: none;
   z-index: -1;
+
+  /* perf hints */
+  will-change: transform;
+  transform: translate3d(-50%, 0, 0); /* base transform (x is fixed) */
+  backface-visibility: hidden;
 }
 
 

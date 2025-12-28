@@ -19,6 +19,18 @@ function isCoarsePointer() {
   }
 }
 
+/**
+ * Very simple Safari / iOS WebKit detection.
+ * - Returns true for Safari + iOS browsers using WebKit.
+ * - Returns false for Chrome, Edge, Chromium, etc.
+ */
+function isSafariLike() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
+  return isSafari;
+}
+
 /** Crisp pixelation via cell-center sampling (v8-safe) */
 class PixelateColsFilter extends PIXI.Filter {
   constructor(cols = 8, aspect = 1, sat = 1.15) {
@@ -241,8 +253,8 @@ export default function VideoP({
   const layoutTickRef = useRef(0);
 
   // ---- prefetch knobs ----
-  // (2) bump to 3, as requested
-  const PREFETCH_RADIUS = 3;
+  // Safari/iOS -> lighter radius (1), others -> 3
+  const PREFETCH_RADIUS = isSafariLike() ? 1 : 3;
 
   // (3) if something isn't ready yet, make sure it plays as soon as it CAN
   function ensurePlayWhenReady(video) {
@@ -635,8 +647,7 @@ export default function VideoP({
       } catch {}
     }
 
-    // IMPORTANT MINIMAL FIX:
-    // Keep only (current ± radius) BUT always keep the record we just requested (idx)
+    // Keep only (current ± radius) AND the record we just requested (idx)
     const want = new Set([currentRef.current, idx]);
     for (let d = 1; d <= PREFETCH_RADIUS; d++) {
       if (currentRef.current - d >= 0) want.add(currentRef.current - d);

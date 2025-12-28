@@ -17,14 +17,20 @@ export default function HeroVideo({
 
   const revealFadeMs = 700;
 
+  // enforce the minimum loading ring + max extra wait
   useEffect(() => {
     const t = setTimeout(() => setMinDelayDone(true), delayMs);
-    const fail = setTimeout(() => setTimedOut(true), delayMs + maxExtraWaitMs);
-    return () => { clearTimeout(t); clearTimeout(fail); };
+    const fail = setTimeout(
+      () => setTimedOut(true),
+      delayMs + maxExtraWaitMs
+    );
+    return () => {
+      clearTimeout(t);
+      clearTimeout(fail);
+    };
   }, [delayMs, maxExtraWaitMs]);
 
-  // no HLS manifest preload needed anymore
-
+  // drive the SVG ring duration
   useEffect(() => {
     if (ringRef.current) {
       ringRef.current.style.setProperty("--duration", `${delayMs}ms`);
@@ -35,6 +41,50 @@ export default function HeroVideo({
 
   const R = 48;
   const C = 2 * Math.PI * R;
+
+  /* ---- NEW: pause hero video once it's off-screen to free resources ---- */
+  useEffect(() => {
+    const section = wrapRef.current;
+    const video = videoRef.current;
+    if (!section || !video) return;
+
+    // Safari supports IO, but guard just in case
+    if (typeof IntersectionObserver === "undefined") {
+      return;
+    }
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.target !== section) continue;
+
+          // If the hero is in view at all, make sure it's playing
+          if (entry.isIntersecting) {
+            try {
+              const p = video.play();
+              if (p && typeof p.catch === "function") p.catch(() => {});
+            } catch {
+              // ignore autoplay issues
+            }
+          } else {
+            // Completely out of view: pause it
+            try {
+              video.pause();
+            } catch {
+              // ignore
+            }
+          }
+        }
+      },
+      {
+        // Consider it "visible" as long as any part of it is in view
+        threshold: 0,
+      }
+    );
+
+    io.observe(section);
+    return () => io.disconnect();
+  }, []);
 
   return (
     <section
@@ -56,7 +106,6 @@ export default function HeroVideo({
             loop
             preload="auto"
             onCanPlay={() => setVideoReady(true)}
-            // onError={() => setTimedOut(true)} // optional
           />
         </div>
 

@@ -1,3 +1,4 @@
+// src/components/PosterClip/PosterClip.jsx
 import React, { useEffect, useRef } from "react";
 import HLSVideo from "../HLSVideo"; // adjust path if needed
 import "./PosterClip.css";
@@ -5,13 +6,21 @@ import "./PosterClip.css";
 /**
  * PosterClip
  * Props:
- *  - posterSrc (string): path to poster image (e.g., "/images/hero.jpg")
+ *  - posterSrc (string): path to poster image
  *  - videoId   (string, optional): Cloudflare Stream VIDEO ID (preferred)
  *  - videoSrc  (string, optional): fallback MP4 path while migrating
  *  - gapPx     (number, optional): vertical gap between poster and video (px)
  *  - className (string, optional): additional class names
+ *  - eager     (boolean, optional): if true, HLS pipeline loads immediately
  */
-export default function PosterClip({ posterSrc, videoId, videoSrc, gapPx = 72, className = "" }) {
+export default function PosterClip({
+  posterSrc,
+  videoId,
+  videoSrc,
+  gapPx = 72,
+  className = "",
+  eager = false,     // NEW
+}) {
   const videoRef = useRef(null);
 
   // Preload HLS manifest for a quicker start (no-op if no videoId)
@@ -31,11 +40,19 @@ export default function PosterClip({ posterSrc, videoId, videoSrc, gapPx = 72, c
     if (videoId) return; // HLSVideo handles autoplay
     const v = videoRef.current;
     if (!v) return;
-    const tryPlay = async () => { try { await v.play(); } catch {} };
+    const tryPlay = async () => {
+      try {
+        await v.play();
+      } catch {
+        /* ignore */
+      }
+    };
     tryPlay();
   }, [videoId]);
 
-  const hlsSrc = videoId ? `https://videodelivery.net/${videoId}/manifest/video.m3u8` : null;
+  const hlsSrc = videoId
+    ? `https://videodelivery.net/${videoId}/manifest/video.m3u8`
+    : null;
 
   return (
     <section
@@ -63,6 +80,7 @@ export default function PosterClip({ posterSrc, videoId, videoSrc, gapPx = 72, c
             muted
             playsInline
             loop
+            eager={eager}  // NEW
             className="posterclip__video w-full h-full object-cover"
           />
         ) : (

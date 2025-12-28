@@ -37,7 +37,7 @@
 @media (max-width: 900px) {
   .profile {
     gap: 1rem;
-    margin-block-start: 4rem;
+    margin-block-start: 6rem;
 
     /* make image + text much wider on small screens */
     --img-w: min(80vw, 560px);
@@ -59,15 +59,15 @@
   z-index: 20;
 
   /* pull the profile UP into the fin region */
-  margin-top: 0;  /* tune this by eye */
-  padding-top: 2rem;   /* just a little breathing room, optional */
+  margin-top: 2rem;  /* tune this by eye */
+  padding-top: 4rem;   /* just a little breathing room, optional */
 }
 
 /* On smaller screens we don't do the overlap at all */
 @media (min-width: 1024px) {
   .lift-after-hero {
-    margin-top: -600px;  /* tune this by eye */
-    padding-top: 2rem;   /* breathing room */
+    margin-top: -560px;  /* tune this by eye */
+    padding-top: 3rem;   /* breathing room */
   }
 }
 

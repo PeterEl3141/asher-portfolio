@@ -93,11 +93,13 @@ export default function App() {
       <PosterClip
       posterSrc="/images/Nyama-Poster.png"
       videoId="2dba4932447ad0a3dafe3d94808f1939"
+      eager 
       />
 
 <PosterClip
   posterSrc="/images/Rabbi-Son-Poster.png"
   videoId="00ed22a6dd2dd3c9e0d87fe0b67c3c5a"
+  eager
 />
 
 <AwardStripBlack/>

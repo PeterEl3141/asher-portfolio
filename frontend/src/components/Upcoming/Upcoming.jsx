@@ -6,31 +6,52 @@ const VIDEO_ID = "c049d08d9ed0cf843851dab095d0fc10";
 const hlsSrc = (id) => `https://videodelivery.net/${id}/manifest/video.m3u8`;
 
 export default function Upcoming() {
-  const [heroY, setHeroY] = useState(0);
   const sectionRef = useRef(null);
+  const heroWordRef = useRef(null); // NEW: ref for the parallax word
   const videoRef = useRef(null);
 
   const src = hlsSrc(VIDEO_ID);
 
   /* ---------------- Parallax for the massive "UPCOMING" word ---------------- */
   useEffect(() => {
-    const handleScroll = () => {
-      if (!sectionRef.current) return;
-      const rect = sectionRef.current.getBoundingClientRect();
-      const visible = rect.top < window.innerHeight && rect.bottom > 0;
-      if (!visible) return;
+    const section = sectionRef.current;
+    const word = heroWordRef.current;
+    if (!section || !word) return;
 
-      const factor = 0.5; // slightly slower than before so it stays visible longer
+    const factor = 0.5; // slightly slower so it stays visible longer
+    let ticking = false;
+
+    const update = () => {
+      const rect = section.getBoundingClientRect();
+      const visible = rect.top < window.innerHeight && rect.bottom > 0;
+      if (!visible) {
+        ticking = false;
+        return;
+      }
+
       const delta = -rect.top;
-      setHeroY(delta * factor);
+      const y = delta * factor;
+
+      // Directly mutate the transform for smoother performance (no React re-renders)
+      word.style.transform = `translate3d(-50%, ${y}px, 0)`;
+      ticking = false;
     };
 
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    window.addEventListener("resize", handleScroll);
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true;
+        window.requestAnimationFrame(update);
+      }
+    };
+
+    // Initialize once in case we're already scrolled
+    update();
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, []);
 
@@ -211,9 +232,9 @@ export default function Upcoming() {
     <section className="upcoming-section" ref={sectionRef}>
       {/* Massive background word with parallax */}
       <div
+        ref={heroWordRef}
         className="upcoming-hero-word"
         aria-hidden
-        style={{ transform: `translate3d(-50%, ${heroY}px, 0)` }}
       >
         UPCOMING
       </div>
@@ -236,7 +257,6 @@ export default function Upcoming() {
           playsInline
         />
       </div>
-
     </section>
   );
 }
