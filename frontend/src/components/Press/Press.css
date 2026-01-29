@@ -131,3 +131,37 @@
   100% { clip-path: inset(0 0 0 0);   opacity: 1; transform: translateY(0); }
 }
 .reveal-slice { animation: slice-reveal 280ms cubic-bezier(.2,.7,.2,1) both; }
+
+
+
+
+
+
+
+/* Mobile tightening */
+@media (max-width: 600px) {
+  .press-section {
+    /* reduce top/bottom breathing room */
+    min-height: auto;                 /* was 120vh (huge on mobile) */
+    padding-top: 70px;                /* was effectively ~100px + clamp */
+    padding-bottom: 120px;            /* was 180px */
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .press-content {
+    padding-top: 140px;               /* was 200px (~30% reduction) */
+    grid-template-columns: 1fr;       /* stack content on mobile */
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .press-main {
+    aspect-ratio: 16 / 11;            /* slightly taller looks better on phone */
+  }
+
+  .press-thumbs {
+    grid-auto-columns: minmax(64px, 1fr);
+    gap: 10px;
+  }
+}

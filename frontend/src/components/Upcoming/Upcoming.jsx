@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import Hls from "hls.js";
+import { useInView } from "../../hooks/useInView"; // adjust path if needed
 import "./Upcoming.css";
 
 const VIDEO_ID = "c049d08d9ed0cf843851dab095d0fc10";
@@ -7,10 +8,23 @@ const hlsSrc = (id) => `https://videodelivery.net/${id}/manifest/video.m3u8`;
 
 export default function Upcoming() {
   const sectionRef = useRef(null);
-  const heroWordRef = useRef(null); // NEW: ref for the parallax word
+  const heroWordRef = useRef(null); // parallax word
   const videoRef = useRef(null);
 
+  // HLS + loop helpers (persist across renders)
+  const hlsRef = useRef(null);
+  const vodDurationRef = useRef(NaN);
+  const hbRef = useRef(null);
+  const lastCTRef = useRef(0);
+
   const src = hlsSrc(VIDEO_ID);
+
+  // Active only when in view (pause once outside viewport)
+  const inView = useInView(sectionRef, {
+    rootMargin: "0px 0px 0px 0px",
+    threshold: 0.0, // any pixel visible
+  });
+  const active = inView;
 
   /* ---------------- Parallax for the massive "UPCOMING" word ---------------- */
   useEffect(() => {
@@ -18,7 +32,7 @@ export default function Upcoming() {
     const word = heroWordRef.current;
     if (!section || !word) return;
 
-    const factor = 0.5; // slightly slower so it stays visible longer
+    const factor = 0.5;
     let ticking = false;
 
     const update = () => {
@@ -32,7 +46,6 @@ export default function Upcoming() {
       const delta = -rect.top;
       const y = delta * factor;
 
-      // Directly mutate the transform for smoother performance (no React re-renders)
       word.style.transform = `translate3d(-50%, ${y}px, 0)`;
       ticking = false;
     };
@@ -44,9 +57,7 @@ export default function Upcoming() {
       }
     };
 
-    // Initialize once in case we're already scrolled
     update();
-
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
     return () => {
@@ -55,9 +66,9 @@ export default function Upcoming() {
     };
   }, []);
 
-  /* ---------------------- Preload HLS manifest (like VideoP) ----------------- */
+  /* ---------------------- Preload HLS manifest only when active ------------- */
   useEffect(() => {
-    if (!src) return;
+    if (!src || !active) return;
     const link = document.createElement("link");
     link.rel = "preload";
     link.as = "fetch";
@@ -67,24 +78,20 @@ export default function Upcoming() {
     return () => {
       document.head.removeChild(link);
     };
-  }, [src]);
+  }, [src, active]);
 
-  /* ----------------------- Robust looping with Hls.js ------------------------ */
+  /* -------------------- Build HLS pipeline ONCE (per src) ------------------- */
   useEffect(() => {
     const video = videoRef.current;
     if (!video || !src) return;
 
+    // Base video attributes
     video.playsInline = true;
     video.muted = true;
     video.autoplay = true;
     video.crossOrigin = "anonymous";
     video.preload = "auto";
     video.loop = false; // we manage looping ourselves
-
-    let hls = null;
-    let vodDuration = NaN;
-    let hb = null;
-    let lastCT = 0;
 
     const seekableStart = () => {
       const s = video.seekable;
@@ -106,6 +113,7 @@ export default function Upcoming() {
       try {
         const start = seekableStart() + 0.03;
 
+        const hls = hlsRef.current;
         if (hls) {
           try {
             hls.stopLoad();
@@ -114,100 +122,123 @@ export default function Upcoming() {
             hls.startLoad(0);
           } catch {}
         } else {
-          // non-Hls.js path: reload src to force restart
-          video.src = "";
+          // Native fallback: src flush ONLY for looping at end
+          const cur = video.src;
+          try {
+            video.src = "";
+          } catch {}
           setTimeout(() => {
-            video.src = src;
+            try {
+              video.src = cur;
+            } catch {}
           }, 0);
         }
 
-        video.currentTime = start;
+        try {
+          video.currentTime = start;
+        } catch {}
+
         const p = video.play();
         if (p && typeof p.catch === "function") p.catch(() => {});
-      } catch {
-        // ignore errors
+      } catch {}
+    };
+
+    const nearEnd = () => {
+      const d = vodDurationRef.current;
+      if (Number.isFinite(d) && d > 0) {
+        return d - video.currentTime <= 0.6;
       }
+      // fallback if duration unknown
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        return video.duration - video.currentTime <= 0.6;
+      }
+      return false;
     };
 
     const onTimeupdate = () => {
-      if (Number.isFinite(vodDuration) && vodDuration > 0) {
-        if (vodDuration - video.currentTime <= 0.25) {
-          restartFromStart();
-        }
-      }
+      if (!active) return; // only enforce loop while active
+      if (nearEnd()) restartFromStart();
     };
 
     const startHeartbeat = () => {
-      if (hb) return;
-      hb = setInterval(() => {
-        const notAdvancing = Math.abs(video.currentTime - lastCT) < 0.01;
-        lastCT = video.currentTime;
+      if (hbRef.current) return;
+      hbRef.current = setInterval(() => {
+        if (!active) return;
 
-        if (
-          (Number.isFinite(vodDuration) &&
-            vodDuration - video.currentTime <= 0.5) ||
-          video.ended ||
-          (notAdvancing && video.currentTime > 0)
-        ) {
+        const notAdvancing =
+          Math.abs(video.currentTime - lastCTRef.current) < 0.01;
+        lastCTRef.current = video.currentTime;
+
+        if (nearEnd() || video.ended || (notAdvancing && video.currentTime > 0.5 && video.readyState >= 2)) {
           restartFromStart();
         }
       }, 350);
     };
 
     const stopHeartbeat = () => {
-      if (hb) {
-        clearInterval(hb);
-        hb = null;
+      if (hbRef.current) {
+        clearInterval(hbRef.current);
+        hbRef.current = null;
       }
     };
 
-    const setup = () =>
-      new Promise((resolve, reject) => {
-        const ok = () => {
-          video.addEventListener("timeupdate", onTimeupdate);
-          startHeartbeat();
-          resolve();
-        };
-        const fail = (e) => reject(e || new Error("HLS error"));
+    video.addEventListener("timeupdate", onTimeupdate);
 
-        if (Hls.isSupported()) {
-          hls = new Hls({ autoStartLoad: true, lowLatencyMode: true });
-          hls.attachMedia(video);
-          hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
-          hls.on(Hls.Events.LEVEL_LOADED, (_evt, data) => {
-            const det = data?.details;
-            if (
-              det &&
-              det.live === false &&
-              Number.isFinite(det.totalduration)
-            ) {
-              vodDuration = det.totalduration;
-            }
-          });
-          hls.on(Hls.Events.MANIFEST_PARSED, ok);
-          hls.on(Hls.Events.ERROR, (_evt, data) => {
-            if (data?.fatal) fail();
-          });
-        } else {
-          // Native HLS (Safari, some mobile)
-          video.src = src;
-          video.addEventListener("loadedmetadata", ok, { once: true });
-          video.addEventListener("error", fail, { once: true });
+    // Build pipeline (hls.js preferred, else native)
+    if (Hls.isSupported()) {
+      const hls = new Hls({ autoStartLoad: false, lowLatencyMode: true });
+      hlsRef.current = hls;
+
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        hls.loadSource(src);
+        // only load/play once active
+        if (active) {
+          try {
+            hls.startLoad(0);
+          } catch {}
         }
       });
 
-    (async () => {
-      try {
-        await setup();
-        try {
-          await video.play();
-        } catch {
-          // ignore autoplay issues
+      hls.on(Hls.Events.LEVEL_LOADED, (_evt, data) => {
+        const det = data?.details;
+        if (det && det.live === false && Number.isFinite(det.totalduration)) {
+          vodDurationRef.current = det.totalduration;
         }
-      } catch {
-        // setup failed; nothing more to do
-      }
-    })();
+      });
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        startHeartbeat();
+        if (active) {
+          const p = video.play();
+          if (p && typeof p.catch === "function") p.catch(() => {});
+        }
+      });
+
+      hls.on(Hls.Events.ERROR, (_evt, data) => {
+        if (data?.fatal) {
+          // Keep it simple: tear down on fatal
+          try {
+            hls.destroy();
+          } catch {}
+          hlsRef.current = null;
+        }
+      });
+    } else {
+      // Native HLS (Safari)
+      video.src = src;
+      video.addEventListener(
+        "loadedmetadata",
+        () => {
+          startHeartbeat();
+          if (active) {
+            const p = video.play();
+            if (p && typeof p.catch === "function") p.catch(() => {});
+          }
+        },
+        { once: true }
+      );
+    }
 
     return () => {
       try {
@@ -215,27 +246,48 @@ export default function Upcoming() {
       } catch {}
       stopHeartbeat();
       try {
-        hls?.destroy?.();
+        hlsRef.current?.destroy?.();
       } catch {}
+      hlsRef.current = null;
       try {
         video.pause?.();
       } catch {}
-      try {
-        video.src = "";
-      } catch {}
+      // IMPORTANT: do NOT clear src here — we want to keep last frame behavior stable
+      // try { video.src = ""; } catch {}
     };
-  }, [src]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src]); // ✅ build once per src
+
+  /* ---------------- Pause/resume on visibility ------------------------------ */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (!active) {
+      try {
+        video.pause();
+      } catch {}
+      try {
+        hlsRef.current?.stopLoad?.();
+      } catch {}
+      return;
+    }
+
+    try {
+      hlsRef.current?.startLoad?.(0);
+    } catch {}
+    try {
+      const p = video.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch {}
+  }, [active]);
 
   /* --------------------------------------------------------------------- */
 
   return (
     <section className="upcoming-section" ref={sectionRef}>
       {/* Massive background word with parallax */}
-      <div
-        ref={heroWordRef}
-        className="upcoming-hero-word"
-        aria-hidden
-      >
+      <div ref={heroWordRef} className="upcoming-hero-word" aria-hidden>
         UPCOMING
       </div>
 
@@ -250,12 +302,7 @@ export default function Upcoming() {
 
       {/* Video directly underneath the image */}
       <div className="upcoming-video-wrap">
-        <video
-          ref={videoRef}
-          className="upcoming-video"
-          muted
-          playsInline
-        />
+        <video ref={videoRef} className="upcoming-video" muted playsInline />
       </div>
     </section>
   );

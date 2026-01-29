@@ -138,8 +138,7 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}) {
       const notAdvancing = Math.abs(el.currentTime - lastCT) < 0.01;
       lastCT = el.currentTime;
       if (
-        (Number.isFinite(vodDuration) &&
-          vodDuration - el.currentTime <= 0.5) ||
+        (Number.isFinite(vodDuration) && vodDuration - el.currentTime <= 0.5) ||
         el.ended ||
         (notAdvancing && el.currentTime > 0)
       ) {
@@ -253,10 +252,8 @@ export default function VideoP({
   const layoutTickRef = useRef(0);
 
   // ---- prefetch knobs ----
-  // Safari/iOS -> lighter radius (1), others -> 3
   const PREFETCH_RADIUS = isSafariLike() ? 1 : 3;
 
-  // (3) if something isn't ready yet, make sure it plays as soon as it CAN
   function ensurePlayWhenReady(video) {
     if (!video) return;
     const tryPlay = () => {
@@ -266,13 +263,11 @@ export default function VideoP({
       } catch {}
     };
 
-    // If already has enough data, try immediately
     if (video.readyState >= 3) {
       tryPlay();
       return;
     }
 
-    // Otherwise, try again when it becomes playable
     const onReady = () => {
       video.removeEventListener("canplay", onReady);
       video.removeEventListener("loadeddata", onReady);
@@ -287,7 +282,6 @@ export default function VideoP({
     if (poolRef.current.has(i)) return;
     try {
       const rec = await getVideoRecord(i, { prefetchOnly: true });
-      // tiny play->pause helps decode first frame, then sit ready
       try {
         await rec.video.play();
         rec.video.pause();
@@ -340,9 +334,12 @@ export default function VideoP({
         background: 0xffffff,
         backgroundAlpha: 1,
         hello: false,
+
+        // ✅ DPR-safe canvas sizing
+        resolution: window.devicePixelRatio || 1,
+        autoDensity: true,
       });
 
-      // (1) touchscreen scroll: don't prevent default + allow browser panning
       if (app.renderer?.events) {
         app.renderer.events.autoPreventDefault = false;
       }
@@ -358,7 +355,6 @@ export default function VideoP({
       el.appendChild(app.canvas);
       app.canvas.classList.add("videoP-canvas");
 
-      // help mobile scrolling (browser gesture hints)
       try {
         el.style.touchAction = "pan-y pinch-zoom";
         app.canvas.style.touchAction = "pan-y pinch-zoom";
@@ -379,15 +375,28 @@ export default function VideoP({
       centerRef.current.zIndex = 5;
       railRef.current.zIndex = 0;
 
-      // prewarm neighbors right away
       prewarmAround(current);
 
+      // ✅ ResizeObserver: rAF + DPR sync
       const ro = new ResizeObserver(() => {
         if (!appRef.current || !containerRef.current) return;
-        const cw = Math.max(1, Math.round(containerRef.current.clientWidth));
-        const ch = Math.max(1, Math.round(containerRef.current.clientHeight));
-        appRef.current.renderer.resize(cw, ch);
-        layoutAll();
+
+        requestAnimationFrame(() => {
+          if (!appRef.current || !containerRef.current) return;
+
+          const cw = Math.max(1, Math.round(containerRef.current.clientWidth));
+          const ch = Math.max(1, Math.round(containerRef.current.clientHeight));
+
+          // keep renderer DPR in sync during resize
+          try {
+            appRef.current.renderer.resolution = window.devicePixelRatio || 1;
+          } catch {}
+
+          appRef.current.renderer.resize(cw, ch);
+
+          // Re-layout after resize
+          layoutAll();
+        });
       });
       ro.observe(el);
       roRef.current = ro;
@@ -527,7 +536,7 @@ export default function VideoP({
     rail.removeChildren();
     pillarsMapRef.current.clear();
 
-    const coarse = isCoarsePointer(); // touch devices: don't hover-switch
+    const coarse = isCoarsePointer();
 
     const buildPillar = (i) => {
       const r = pillarRectForIndex(i, cur);
@@ -550,14 +559,11 @@ export default function VideoP({
       );
       sprite.filters = [filt];
 
-      // hover intent + prewarm (desktop only)
       if (!coarse) {
         sprite.on("pointerenter", () => {
           if (animatingRef.current) return;
           if (Date.now() < hoverCooldownUntilRef.current) return;
-
-          prewarmIdx(i); // warm this target immediately
-
+          prewarmIdx(i);
           hoverIdxRef.current = i;
           startHoverTimer(i, layoutTickRef.current);
         });
@@ -568,7 +574,6 @@ export default function VideoP({
         });
       }
 
-      // tap/click always works
       sprite.on("pointertap", () => {
         if (animatingRef.current) return;
         if (Date.now() < hoverCooldownUntilRef.current) return;
@@ -592,10 +597,17 @@ export default function VideoP({
     layoutTickRef.current++;
 
     const cRect = centerRectFor(current);
-    const tex = center.texture?.source;
-    const tW = tex?.width || 16,
-      tH = tex?.height || 9;
+
+    // ✅ FIX: prefer the ACTIVE video's intrinsic dimensions
+    const rec = poolRef.current.get(current);
+    const v = rec?.video;
+
+    const texSrc = center.texture?.source;
+    const tW = v?.videoWidth || texSrc?.width || 16;
+    const tH = v?.videoHeight || texSrc?.height || 9;
+
     const fit = fitContain(tW, tH, Math.round(cRect.w), Math.round(cRect.h));
+
     center.position.set(
       Math.round(cRect.x + fit.x),
       Math.round(cRect.y + fit.y)
@@ -630,7 +642,6 @@ export default function VideoP({
   async function getVideoRecord(idx, { prefetchOnly = false } = {}) {
     if (poolRef.current.has(idx)) return poolRef.current.get(idx);
 
-    // Always create the media pipeline; for prefetch we'll pause it right after
     const rec = await createStreamVideo(videos[idx].id, {
       autoplay: true,
       muted: true,
@@ -647,7 +658,6 @@ export default function VideoP({
       } catch {}
     }
 
-    // Keep only (current ± radius) AND the record we just requested (idx)
     const want = new Set([currentRef.current, idx]);
     for (let d = 1; d <= PREFETCH_RADIUS; d++) {
       if (currentRef.current - d >= 0) want.add(currentRef.current - d);
@@ -707,13 +717,11 @@ export default function VideoP({
 
     const prevIdx = currentRef.current;
 
-    // Begin preloading incoming, but don't block on it.
     const incomingRecPromise = getVideoRecord(nextIdx, {
       prefetchOnly: true,
     }).catch(() => null);
     const currentRec = poolRef.current.get(prevIdx);
 
-    // Current bounds & source pillar
     const cRectNow = center.getBounds();
     const srcPillar = pillarsMapRef.current.get(nextIdx);
     if (!srcPillar) {
@@ -722,9 +730,8 @@ export default function VideoP({
     }
     const fromRect = srcPillar.getBounds();
 
-    // FINAL rectangles for nextIdx (also sets mode)
     const finalCRect = centerRectFor(nextIdx);
-    const incTexSrc = center.texture?.source; // placeholder dims until we swap
+    const incTexSrc = center.texture?.source;
     const incW = incTexSrc?.width || 16,
       incH = incTexSrc?.height || 9;
     const fitFinal = fitContain(
@@ -741,17 +748,14 @@ export default function VideoP({
     };
     const toRectForOutgoing = pillarRectForIndex(prevIdx, nextIdx);
 
-    // Remove source pillar immediately (prevents ghost re-appearance)
     try {
       srcPillar.parent?.removeChild(srcPillar);
       srcPillar.destroy({ children: true, texture: false, baseTexture: false });
     } catch {}
     pillarsMapRef.current.delete(nextIdx);
 
-    // Freeze rails for glitch-free transition
     rail.cacheAsBitmap = true;
 
-    // --- Incoming starts as POSTER (instant), then swaps to video when ready ---
     const posterTex = PIXI.Texture.from(videos[nextIdx].poster);
     try {
       posterTex.source.scaleMode = "nearest";
@@ -764,7 +768,6 @@ export default function VideoP({
     incomingSprite.height = Math.round(fromRect.height);
     app.stage.addChild(incomingSprite);
 
-    // As soon as the real video is warm, swap the texture on the incoming sprite
     incomingRecPromise.then((rec) => {
       if (!rec) return;
       const swap = () => {
@@ -784,7 +787,6 @@ export default function VideoP({
       }
     });
 
-    // Outgoing (center -> pillar), with pixelation ramp
     const outgoingSprite = new PIXI.Sprite(center.texture);
     try {
       outgoingSprite.texture.source.scaleMode = "nearest";
@@ -808,7 +810,6 @@ export default function VideoP({
     outgoingSprite.filters = [outFilt];
     app.stage.addChild(outgoingSprite);
 
-    // Hide underlying center video during morph
     center.visible = false;
     try {
       currentRec?.video?.pause?.();
@@ -845,31 +846,32 @@ export default function VideoP({
         ticker?.stop();
       } catch {}
 
-      // Commit center to exact final box
       setCenterTexture(nextIdx, true);
-      const tex = center.texture?.source;
-      const tW = tex?.width || 16,
-        tH = tex?.height || 9;
+
+      // Commit center to exact final box
+      const rec = poolRef.current.get(nextIdx);
+      const v = rec?.video;
+      const texSrc = center.texture?.source;
+
+      const tW = v?.videoWidth || texSrc?.width || 16;
+      const tH = v?.videoHeight || texSrc?.height || 9;
+
       center.position.set(finalTarget.x, finalTarget.y);
       center.scale.set(finalTarget.w / tW, finalTarget.h / tH);
       center.visible = true;
 
-      // Clean up temp sprites
       incomingSprite.destroy({ children: true, texture: false, baseTexture: false });
       outgoingSprite.destroy({ children: true, texture: false, baseTexture: false });
 
-      // Rebuild rails for NEW index while paused
       layoutTickRef.current++;
       layoutRailFor(nextIdx);
 
-      // Unfreeze rails, resume playback + rendering
       rail.cacheAsBitmap = false;
 
       const newRec = poolRef.current.get(nextIdx);
       try {
         newRec?.video?.play?.();
       } catch {}
-      // If it wasn't ready yet, this guarantees it will start once it is:
       ensurePlayWhenReady(newRec?.video);
 
       try {
@@ -877,19 +879,16 @@ export default function VideoP({
       } catch {}
 
       setCurrent(nextIdx);
-      currentRef.current = nextIdx; // keep ref in sync immediately
+      currentRef.current = nextIdx;
 
       hoverCooldownUntilRef.current = Date.now() + hoverCooldownMs;
       animatingRef.current = false;
 
-      // prewarm around the new current
       prewarmAround(nextIdx);
     });
   }
 
   /* ------------------------------------------------------------------- */
-
-  const activeTitle = videos[current]?.title || "";
 
   return <div className="videoP-root" ref={containerRef}></div>;
 }

@@ -98,3 +98,40 @@
     border-radius: 14px;
   }
 }
+
+
+
+
+
+/* Mobile tightening */
+@media (max-width: 600px) {
+  .upcoming-section {
+    min-height: auto;                 /* was 160vh */
+    padding-top: 180px;               /* was calc(250px + clamp(...)) -> huge */
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-bottom: 80px;             /* reduce tail space */
+    margin-bottom: 80px;              /* was 200px */
+  }
+
+  .upcoming-hero-word {
+    top: 120px;                       /* was 250px */
+    -webkit-text-stroke: 5px rgba(107, 107, 107, 0.5); /* lighter stroke for small */
+    font-size: clamp(56px, 18vw, 140px);
+  }
+
+  .upcoming-main {
+    width: 100%;
+    padding-top: 32px;                /* was 100px */
+    margin-top: 24px;
+  }
+
+  .upcoming-video-wrap {
+    width: 100%;
+    margin-top: 18px;
+  }
+
+  .upcoming-video {
+    margin-bottom: 0;                 /* was 200px (creates extra black) */
+  }
+}

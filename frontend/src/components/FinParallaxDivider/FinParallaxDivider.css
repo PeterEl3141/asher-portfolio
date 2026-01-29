@@ -38,3 +38,11 @@
   transition: none !important;
   pointer-events: auto;
 }
+
+
+/* While hero is loading, fins must not appear above it */
+body[data-hero-loading] .finpxd__overlay {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}

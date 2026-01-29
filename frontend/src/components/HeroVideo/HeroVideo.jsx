@@ -39,6 +39,27 @@ export default function HeroVideo({
 
   const showVideo = minDelayDone && (videoReady || timedOut);
 
+ useEffect(() => {
+  // when showVideo is false, we're in the loader phase
+  document.body.toggleAttribute("data-hero-loading", !showVideo);
+
+  // when the loader finishes, refresh ScrollTrigger positions
+  if (showVideo) {
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        try {
+          window.ScrollTrigger?.refresh?.();
+        } catch {}
+      })
+    );
+  }
+
+  return () => {
+    document.body.removeAttribute("data-hero-loading");
+  };
+}, [showVideo]);
+
+
   const R = 48;
   const C = 2 * Math.PI * R;
 
