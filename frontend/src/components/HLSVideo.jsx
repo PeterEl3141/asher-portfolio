@@ -1,180 +1,211 @@
 // src/components/HLSVideo.jsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import Hls from "hls.js";
 
 export default function HLSVideo({
   src,
+  active = true,
   autoPlay = true,
   muted = true,
   playsInline = true,
   loop = true,
   className = "",
   onReady,
-  eager = false,          // NEW: skip IO and load immediately
 }) {
   const ref = useRef(null);
   const hlsRef = useRef(null);
-  const [shouldPlay, setShouldPlay] = useState(eager);
 
-  /* ------------ Visibility / prewarm control (IntersectionObserver) --------- */
+  // state refs (don’t trigger rerenders)
+  const hbRef = useRef(null);
+  const lastCTRef = useRef(0);
+  const vodDurationRef = useRef(NaN);
+  const restartingRef = useRef(false);
+
+  // ---------- INIT PIPELINE (ONLY when src changes / mount) ----------
   useEffect(() => {
-    const video = ref.current;
-    if (!video) return;
+    const el = ref.current;
+    if (!el || !src) return;
 
-    // If this clip is marked eager, we never use the observer
-    if (eager) {
-      setShouldPlay(true);
-      return;
-    }
-
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          const ratio = entry.intersectionRatio;
-
-          // Start warming when at least ~20–25% visible
-          if (ratio >= 0.25) {
-            setShouldPlay(true);
-          }
-          // Only tear down once it's basically gone
-          else if (ratio <= 0.05) {
-            setShouldPlay(false);
-          }
-        });
-      },
-      {
-        // Start work a bit before it hits the viewport, and keep it alive
-        // slightly past the edges.
-        root: null,
-        rootMargin: "200px 0px 200px 0px",
-        threshold: [0, 0.05, 0.25],
-      }
-    );
-
-    io.observe(video);
-    return () => io.disconnect();
-  }, [eager]);
-
-  /* ----------------------- HLS / video pipeline ----------------------------- */
-  useEffect(() => {
-    const video = ref.current;
-    if (!video || !src) return;
-
-    // If we shouldn't be active (yet), just make sure previous pipeline is gone.
-    if (!shouldPlay) {
-      if (hlsRef.current) {
-        try {
-          hlsRef.current.destroy();
-        } catch {}
-        hlsRef.current = null;
-      }
-      // Don't blank src here; keep poster / last frame visible
-      return;
-    }
-
-    // Ensure attributes are set early
-    video.muted = muted;
-    video.autoplay = autoPlay;
-    video.playsInline = playsInline;
-    video.loop = false; // we handle looping manually
-
-    const handleEnded = () => {
-      if (!loop) return;
-      try {
-        video.currentTime = 0;
-        const p = video.play();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      } catch {}
-    };
-    video.addEventListener("ended", handleEnded);
+    el.playsInline = playsInline;
+    el.muted = muted;
+    el.autoplay = autoPlay;
+    el.loop = false;
 
     let cancelled = false;
 
-    // Safari / iOS – native HLS
-    if (video.canPlayType("application/vnd.apple.mpegURL")) {
-      video.src = src;
+    const safePlay = () => {
+      if (!autoPlay) return;
+      try {
+        const p = el.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch {}
+    };
 
-      const ready = () => {
+    const seekableStart = () => {
+      const s = el.seekable;
+      if (s && s.length) { try { return s.start(0); } catch {} }
+      const b = el.buffered;
+      if (b && b.length) { try { return b.start(0); } catch {} }
+      return 0;
+    };
+
+    const duration = () => {
+      const v = vodDurationRef.current;
+      const d = Number.isFinite(v) && v > 0 ? v : el.duration;
+      return Number.isFinite(d) && d > 0 ? d : NaN;
+    };
+
+    const nearEnd = () => {
+      const d = duration();
+      if (!Number.isFinite(d)) return false;
+      return d - el.currentTime <= 0.6;
+    };
+
+    // HARD LOOP: same behaviour you liked
+    const restartFromStart = () => {
+      if (!loop || restartingRef.current) return;
+      restartingRef.current = true;
+
+      const start = seekableStart() + 0.03;
+      const hls = hlsRef.current;
+
+      try { el.pause(); } catch {}
+
+      if (hls) {
+        try { hls.stopLoad(); } catch {}
+        try { hls.startLoad(0); } catch {}
+        try { el.currentTime = start; } catch {}
+        safePlay();
+        restartingRef.current = false;
+        return;
+      }
+
+      // Native fallback: SRC FLUSH (only used for looping, not for scroll pause)
+      try {
+        el.removeAttribute("src");
+        el.load();
+      } catch {}
+
+      setTimeout(() => {
         if (cancelled) return;
-        onReady?.();
-        if (autoPlay) {
-          const p = video.play();
-          if (p && typeof p.catch === "function") p.catch(() => {});
+        try {
+          el.src = src;
+          el.load();
+        } catch {}
+
+        const onMeta = () => {
+          try { el.currentTime = start; } catch {}
+          safePlay();
+          restartingRef.current = false;
+        };
+
+        el.addEventListener("loadedmetadata", onMeta, { once: true });
+
+        // unlock guard
+        setTimeout(() => {
+          if (cancelled) return;
+          restartingRef.current = false;
+        }, 1500);
+      }, 0);
+    };
+
+    const onTimeUpdate = () => {
+      if (!loop) return;
+      if (nearEnd()) restartFromStart();
+    };
+
+    const startHeartbeat = () => {
+      if (hbRef.current) return;
+      hbRef.current = setInterval(() => {
+        // IMPORTANT: only enforce loop when the element is active/playing
+        // (active gating happens in the active-effect below)
+        const notAdvancing = Math.abs(el.currentTime - lastCTRef.current) < 0.01;
+        lastCTRef.current = el.currentTime;
+
+        if (nearEnd() || el.ended || (notAdvancing && el.currentTime > 0.5 && el.readyState >= 2)) {
+          restartFromStart();
         }
-      };
+      }, 350);
+    };
 
-      video.addEventListener("canplay", ready, { once: true });
+    const stopHeartbeat = () => {
+      if (hbRef.current) {
+        clearInterval(hbRef.current);
+        hbRef.current = null;
+      }
+    };
 
-      return () => {
-        cancelled = true;
-        video.removeEventListener("ended", handleEnded);
-        video.removeEventListener("canplay", ready);
-      };
-    }
+    el.addEventListener("timeupdate", onTimeUpdate);
 
-    // Other browsers – hls.js
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        autoStartLoad: true,
-        lowLatencyMode: true,
-      });
+    const preferHlsJs = Hls.isSupported();
+
+    if (preferHlsJs) {
+      const hls = new Hls({ autoStartLoad: true, lowLatencyMode: true });
       hlsRef.current = hls;
 
-      const ready = () => {
+      hls.attachMedia(el);
+      hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
+
+      hls.on(Hls.Events.LEVEL_LOADED, (_evt, data) => {
+        const det = data?.details;
+        if (det && det.live === false && Number.isFinite(det.totalduration)) {
+          vodDurationRef.current = det.totalduration;
+        }
+      });
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
         if (cancelled) return;
         onReady?.();
-        if (autoPlay) {
-          const p = video.play();
-          if (p && typeof p.catch === "function") p.catch(() => {});
-        }
-      };
-
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MEDIA_ATTACHED, () => hls.loadSource(src));
-      hls.on(Hls.Events.MANIFEST_PARSED, ready);
-      hls.on(Hls.Events.ERROR, (_evt, data) => {
-        if (data?.fatal && !cancelled) {
-          try {
-            hls.destroy();
-          } catch {}
-          hlsRef.current = null;
-        }
+        startHeartbeat();
+        // play/pause is controlled by `active` effect below
       });
 
       return () => {
         cancelled = true;
-        video.removeEventListener("ended", handleEnded);
-        try {
-          hls.destroy();
-        } catch {}
+        stopHeartbeat();
+        el.removeEventListener("timeupdate", onTimeUpdate);
+        try { hls.destroy(); } catch {}
         hlsRef.current = null;
       };
     }
 
-    // Fallback: direct MP4 or unsupported HLS
-    video.src = src;
-    const ready = () => {
+    // Native HLS path
+    el.src = src;
+    el.addEventListener("loadedmetadata", () => {
       if (cancelled) return;
       onReady?.();
-      if (autoPlay) {
-        const p = video.play();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      }
-    };
-    video.addEventListener("canplay", ready, { once: true });
+      startHeartbeat();
+    }, { once: true });
 
     return () => {
       cancelled = true;
-      video.removeEventListener("ended", handleEnded);
-      video.removeEventListener("canplay", ready);
+      stopHeartbeat();
+      el.removeEventListener("timeupdate", onTimeUpdate);
     };
-  }, [src, autoPlay, muted, playsInline, loop, onReady, shouldPlay]);
+  }, [src, autoPlay, muted, playsInline, loop, onReady]);
 
-  return (
-    <video
-      ref={ref}
-      className={className}
-      playsInline={playsInline}
-    />
-  );
+  // ---------- ACTIVE CONTROL (PAUSE/RESUME ONLY, KEEP FRAME) ----------
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    if (!active) {
+      // pause only (keeps last frame)
+      try { el.pause(); } catch {}
+      // optional: stop network while offscreen
+      try { hlsRef.current?.stopLoad?.(); } catch {}
+      return;
+    }
+
+    // resume
+    try { hlsRef.current?.startLoad?.(0); } catch {}
+    if (autoPlay) {
+      try {
+        const p = el.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
+      } catch {}
+    }
+  }, [active, autoPlay]);
+
+  return <video ref={ref} className={className} playsInline={playsInline} />;
 }
