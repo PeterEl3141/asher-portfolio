@@ -1,109 +1,159 @@
 // src/utils/videoAudioController.js
 
 let currentVideo = null;
-let fadeRAF = null;
+
+// per-video fade rAF (NOT global)
+const fadeRAFByVideo = new Map();
+
+// prevent “tap spam” races on mobile
+let toggleBusy = false;
+let lastToggleAt = 0;
 
 export function isCurrentAudible(video) {
   if (!video) return false;
-  return currentVideo === video && !video.muted;
+  return currentVideo === video && video.muted === false;
 }
 
-function cancelFade() {
-  if (fadeRAF) {
-    cancelAnimationFrame(fadeRAF);
-    fadeRAF = null;
+function cancelFade(video) {
+  const raf = fadeRAFByVideo.get(video);
+  if (raf) {
+    cancelAnimationFrame(raf);
+    fadeRAFByVideo.delete(video);
   }
 }
 
-function fade(video, from, to, duration = 250, onDone) {
-  cancelFade();
+function fade(video, from, to, duration = 200, onDone) {
+  if (!video) return;
+  cancelFade(video);
+
+  // If the tab is busy / throttled, don’t “accumulate” fades forever
+  if (!Number.isFinite(duration) || duration <= 0) {
+    video.volume = to;
+    onDone?.();
+    return;
+  }
+
   const start = performance.now();
 
-  function tick(now) {
+  const tick = (now) => {
     const p = Math.min(1, (now - start) / duration);
     video.volume = from + (to - from) * p;
+
     if (p < 1) {
-      fadeRAF = requestAnimationFrame(tick);
+      const raf = requestAnimationFrame(tick);
+      fadeRAFByVideo.set(video, raf);
     } else {
-      fadeRAF = null;
+      fadeRAFByVideo.delete(video);
       onDone?.();
     }
-  }
+  };
 
   video.volume = from;
-  fadeRAF = requestAnimationFrame(tick);
+  const raf = requestAnimationFrame(tick);
+  fadeRAFByVideo.set(video, raf);
+}
+
+// iOS-safe pattern:
+// - ensure video is playing (muted) inside gesture
+// - THEN unmute
+async function ensurePlayingMuted(video) {
+  if (!video) return false;
+
+  // keep it “play-eligible”
+  video.muted = true;
+  video.volume = 0;
+
+  // if already playing, great
+  if (!video.paused && video.readyState >= 2) return true;
+
+  try {
+    const p = video.play();
+    if (p && typeof p.then === "function") {
+      await p;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function toggleVideoAudio(video) {
   if (!video) return false;
 
-  // Clicking the currently active video → mute it
-  if (currentVideo === video) {
-    cancelFade();
-    // hard mute immediately (more reliable than waiting for fade callback)
+  const now = performance.now();
+  // very small lock to prevent double toggles / ghost taps
+  if (toggleBusy && now - lastToggleAt < 250) {
+    return isCurrentAudible(video);
+  }
+  toggleBusy = true;
+  lastToggleAt = now;
+
+  // ---- MUTE PATH (make it immediate + deterministic) ----
+  if (currentVideo === video && video.muted === false) {
+    cancelFade(video);
+    // immediate state change
     video.volume = 0;
     video.muted = true;
-
-    // optional: keep your fade-out feel
-    fade(video, 0, 0, 0, () => {});
 
     currentVideo = null;
+    toggleBusy = false;
     return false;
   }
 
-  // Switching from another video → fade previous out + mute
+  // ---- switching away: hard-mute previous immediately (avoid delayed callbacks) ----
   if (currentVideo && currentVideo !== video) {
     const prev = currentVideo;
-    cancelFade();
-    fade(prev, prev.volume ?? 1, 0, 150, () => {
-      prev.volume = 0;
-      prev.muted = true;
-    });
+    cancelFade(prev);
+    prev.volume = 0;
+    prev.muted = true;
   }
 
+  // activate
   currentVideo = video;
 
-  // ✅ iOS-safe unlock pattern:
-  // 1) ensure "muted play" is happening in the gesture
-  // 2) only unmute after play() actually starts
-  try {
-    video.muted = true;
-    video.volume = 0;
-
-    const p = video.play();
-    if (p && typeof p.then === "function") {
-      p.then(() => {
-        // now it's truly playing -> unmute is much more reliable
-        video.muted = false;
-        fade(video, 0, 1, 250);
-      }).catch(() => {
-        // play failed: leave muted and let the next tap retry
+  // ---- UNMUTE PATH ----
+  // important: DO NOT rely on fades/callbacks to set muted=false
+  // get it playing while muted first
+  ensurePlayingMuted(video).then((ok) => {
+    if (!ok) {
+      // couldn’t start playback; stay muted and let next tap retry
+      if (currentVideo === video) {
         video.muted = true;
         video.volume = 0;
-      });
-    } else {
-      // older browsers: best effort
-      video.muted = false;
-      fade(video, 0, 1, 250);
+        currentVideo = null;
+      }
+      toggleBusy = false;
+      return;
     }
-  } catch {
-    video.muted = true;
-    video.volume = 0;
-    return false;
-  }
 
-  // Return "intended audible" (UI will flip immediately; actual audible follows play resolve)
+    // only unmute if we’re still the active one
+    if (currentVideo !== video) {
+      toggleBusy = false;
+      return;
+    }
+
+    // now unmute + fade in (fade is cosmetic)
+    video.muted = false;
+
+    // If main thread is overloaded, fade will lag; still set a sane baseline
+    video.volume = 1;
+
+    // optional: if you still want fade-in feel, comment out volume=1 above and use fade:
+    // video.volume = 0;
+    // fade(video, 0, 1, 200);
+
+    toggleBusy = false;
+  });
+
   return true;
 }
 
-
-
-
 export function muteIfCurrent(video) {
-  if (currentVideo === video) {
-    fade(video, video.volume ?? 1, 0, 200, () => {
-      video.muted = true;
-    });
-    currentVideo = null;
-  }
+  if (!video) return;
+  if (currentVideo !== video) return;
+
+  cancelFade(video);
+  video.volume = 0;
+  video.muted = true;
+  currentVideo = null;
 }

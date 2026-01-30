@@ -274,7 +274,7 @@ export default function VideoP({
   }
 
   // ---- prefetch knobs ----
-  const PREFETCH_RADIUS = isSafariLike() ? 1 : 3;
+  const PREFETCH_RADIUS = isCoarsePointer() ? 1 : (isSafariLike() ? 1 : 3);
 
   function ensurePlayWhenReady(video) {
     if (!video) return;
@@ -341,6 +341,15 @@ export default function VideoP({
       if (rec?.video) rec.video.muted = true;
     }
   }
+
+  function pauseAllExcept(activeIdx) {
+  for (const [idx, rec] of poolRef.current.entries()) {
+    if (!rec?.video) continue;
+    if (idx === activeIdx) continue;
+    try { rec.video.pause?.(); } catch {}
+  }
+}
+
 
   // Keep cursor state in sync when current changes
   useEffect(() => {
@@ -454,6 +463,7 @@ export default function VideoP({
     layoutAll();
     primePool(current);
     muteAllExcept(current); // keep the pool muted except the current *if you ever want that*
+    pauseAllExcept(current)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     current,
@@ -888,6 +898,8 @@ export default function VideoP({
       // mute everything (safe + clear)
       muteAll();
       setIsAudible(false); // cursor resets because new one is muted
+      pauseAllExcept(nextIdx);
+
 
       try { ticker?.start(); } catch {}
 

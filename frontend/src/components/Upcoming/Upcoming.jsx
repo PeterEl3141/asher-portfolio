@@ -142,7 +142,6 @@ useEffect(() => {
       if (!active || !nearEnd()) return;
       try {
         video.currentTime = 0.03;
-        video.play().catch(() => {});
       } catch {}
     };
 
@@ -166,13 +165,12 @@ useEffect(() => {
       });
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        if (active) video.play().catch(() => {});
       });
     } else {
       video.src = src;
       video.addEventListener(
         "loadedmetadata",
-        () => active && video.play().catch(() => {}),
+        () => {},
         { once: true }
       );
     }
@@ -195,7 +193,6 @@ useEffect(() => {
       hlsRef.current?.stopLoad?.();
     } else {
       hlsRef.current?.startLoad?.(0);
-      v.play().catch(() => {});
     }
   }, [active]);
 
