@@ -43,10 +43,10 @@ export function toggleVideoAudio(video) {
       video.muted = true;
     });
     currentVideo = null;
-    return false; // 🔴 IMPORTANT
+    return false;
   }
 
-  // Switching from another video
+  // Fade out previous video (if any)
   if (currentVideo && currentVideo !== video) {
     const prev = currentVideo;
     fade(prev, prev.volume ?? 1, 0, 200, () => {
@@ -56,12 +56,21 @@ export function toggleVideoAudio(video) {
 
   // Activate new one
   currentVideo = video;
-  video.muted = false;
+
+  // ✅ CRITICAL ORDER FOR iOS
+  video.muted = false;   // ← MUST come first
   video.volume = 0;
+
+  try {
+    const p = video.play(); // ← must happen AFTER unmute
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch {}
+
   fade(video, 0, 1, 250);
 
-  return true; // 🔴 IMPORTANT
+  return true;
 }
+
 
 
 export function muteIfCurrent(video) {

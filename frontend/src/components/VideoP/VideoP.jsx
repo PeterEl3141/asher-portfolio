@@ -5,10 +5,8 @@ import { Assets } from "pixi.js";
 import { gsap } from "gsap";
 import Hls from "hls.js";
 import "./VideoP.css";
-import { toggleVideoAudio, muteIfCurrent } from "../../utils/videoAudioController";
+import { toggleVideoAudio, muteIfCurrent, isCurrentAudible } from "../../utils/videoAudioController";
 import { useInView } from "../../hooks/useInView";
-import { isCurrentAudible } from "../../utils/videoAudioController";
-
 
 /* ------------------------------- Utils ------------------------------- */
 
@@ -112,17 +110,11 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}) {
     try {
       const start = seekableStart() + 0.03;
       if (hls) {
-        try {
-          hls.stopLoad();
-        } catch {}
-        try {
-          hls.startLoad(0);
-        } catch {}
+        try { hls.stopLoad(); } catch {}
+        try { hls.startLoad(0); } catch {}
       } else {
         el.src = "";
-        setTimeout(() => {
-          el.src = src;
-        }, 0);
+        setTimeout(() => { el.src = src; }, 0);
       }
       el.currentTime = start;
       const p = el.play();
@@ -150,16 +142,13 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}) {
       }
     }, 350);
   };
+
   const stopHeartbeat = () => {
     if (hb) {
       clearInterval(hb);
       hb = null;
     }
   };
-
-
-  
-
 
   await new Promise((resolve, reject) => {
     const ok = () => {
@@ -195,24 +184,14 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}) {
   } catch {}
 
   const texture = PIXI.Texture.from(el);
-  try {
-    texture.source.scaleMode = "nearest";
-  } catch {}
+  try { texture.source.scaleMode = "nearest"; } catch {}
 
   const destroy = () => {
-    try {
-      el.removeEventListener("timeupdate", onTimeupdate);
-    } catch {}
+    try { el.removeEventListener("timeupdate", onTimeupdate); } catch {}
     stopHeartbeat();
-    try {
-      hls?.destroy?.();
-    } catch {}
-    try {
-      el.pause?.();
-    } catch {}
-    try {
-      el.src = "";
-    } catch {}
+    try { hls?.destroy?.(); } catch {}
+    try { el.pause?.(); } catch {}
+    try { el.src = ""; } catch {}
   };
 
   return { video: el, texture, destroy, hls };
@@ -242,9 +221,7 @@ export default function VideoP({
   const [isAudible, setIsAudible] = useState(false);
 
   const currentRef = useRef(current);
-  useEffect(() => {
-    currentRef.current = current;
-  }, [current]);
+  useEffect(() => { currentRef.current = current; }, [current]);
 
   const poolRef = useRef(new Map()); // idx -> { video, texture, destroy, hls }
   const animatingRef = useRef(false);
@@ -253,7 +230,6 @@ export default function VideoP({
   const railRef = useRef(null);
   const roRef = useRef(null);
   const pillarsMapRef = useRef(new Map());
-
   const layoutModeRef = useRef("h");
 
   const hoverTimerRef = useRef(null);
@@ -261,15 +237,15 @@ export default function VideoP({
   const hoverCooldownUntilRef = useRef(0);
   const layoutTickRef = useRef(0);
 
-  const soundUnlockedRef = useRef(false);
+  // NEW: a DOM overlay "hitbox" that only covers the CENTER video area
+  const centerHitRef = useRef(null);
 
   const inView = useInView(containerRef, { threshold: 0.0 });
 
-
   function getActiveVideo() {
-  const rec = poolRef.current.get(currentRef.current);
-  return rec?.video || null;
-}
+    const rec = poolRef.current.get(currentRef.current);
+    return rec?.video || null;
+  }
 
   // ---- prefetch knobs ----
   const PREFETCH_RADIUS = isSafariLike() ? 1 : 3;
@@ -302,13 +278,8 @@ export default function VideoP({
     if (poolRef.current.has(i)) return;
     try {
       const rec = await getVideoRecord(i, { prefetchOnly: true });
-      try {
-        await rec.video.play();
-        rec.video.pause();
-      } catch {}
-      try {
-        rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001);
-      } catch {}
+      try { await rec.video.play(); rec.video.pause(); } catch {}
+      try { rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001); } catch {}
     } catch {}
   }
 
@@ -327,27 +298,30 @@ export default function VideoP({
   useMemo(() => {
     videos.map((v) => {
       const t = PIXI.Texture.from(v.poster);
-      try {
-        t.source.scaleMode = "nearest";
-      } catch {}
+      try { t.source.scaleMode = "nearest"; } catch {}
       return t;
     });
   }, [videos]);
 
-
   function muteAllExcept(activeIdx) {
-  for (const [idx, rec] of poolRef.current.entries()) {
-    if (!rec?.video) continue;
-    rec.video.muted = idx !== activeIdx;
+    for (const [idx, rec] of poolRef.current.entries()) {
+      if (!rec?.video) continue;
+      rec.video.muted = idx !== activeIdx;
+    }
   }
-}
 
-//default to the unmute cursor when changing to a new video 
-useEffect(() => {
-  const v = getActiveVideo();
-  setIsAudible(!!(v && isCurrentAudible(v)));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [current]);
+  function muteAll() {
+    for (const [, rec] of poolRef.current.entries()) {
+      if (rec?.video) rec.video.muted = true;
+    }
+  }
+
+  // Keep cursor state in sync when current changes
+  useEffect(() => {
+    const v = getActiveVideo();
+    setIsAudible(!!(v && isCurrentAudible(v)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current]);
 
   /* ----------------------------- Mount -------------------------------- */
 
@@ -369,8 +343,6 @@ useEffect(() => {
         background: 0xffffff,
         backgroundAlpha: 1,
         hello: false,
-
-        // ✅ DPR-safe canvas sizing
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
       });
@@ -380,9 +352,7 @@ useEffect(() => {
       }
 
       if (disposed) {
-        try {
-          app.destroy(true);
-        } catch {}
+        try { app.destroy(true); } catch {}
         return;
       }
 
@@ -395,9 +365,7 @@ useEffect(() => {
         app.canvas.style.touchAction = "pan-y pinch-zoom";
       } catch {}
 
-      try {
-        PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.OFF;
-      } catch {}
+      try { PIXI.settings.MIPMAP_TEXTURES = PIXI.MIPMAP_MODES.OFF; } catch {}
       app.stage.sortableChildren = true;
 
       try {
@@ -412,7 +380,7 @@ useEffect(() => {
 
       prewarmAround(current);
 
-      // ✅ ResizeObserver: rAF + DPR sync
+      // ResizeObserver: rAF + DPR sync
       const ro = new ResizeObserver(() => {
         if (!appRef.current || !containerRef.current) return;
 
@@ -422,14 +390,9 @@ useEffect(() => {
           const cw = Math.max(1, Math.round(containerRef.current.clientWidth));
           const ch = Math.max(1, Math.round(containerRef.current.clientHeight));
 
-          // keep renderer DPR in sync during resize
-          try {
-            appRef.current.renderer.resolution = window.devicePixelRatio || 1;
-          } catch {}
-
+          try { appRef.current.renderer.resolution = window.devicePixelRatio || 1; } catch {}
           appRef.current.renderer.resize(cw, ch);
 
-          // Re-layout after resize
           layoutAll();
         });
       });
@@ -438,16 +401,14 @@ useEffect(() => {
     })();
 
     return () => {
-      try {
-        roRef.current?.disconnect?.();
-      } catch {}
+      try { roRef.current?.disconnect?.(); } catch {}
       cancelHoverTimer();
+
       for (const [, rec] of poolRef.current) {
-        try {
-          rec.destroy?.();
-        } catch {}
+        try { rec.destroy?.(); } catch {}
       }
       poolRef.current.clear();
+
       try {
         appRef.current?.destroy(true, {
           children: true,
@@ -455,19 +416,18 @@ useEffect(() => {
           baseTexture: true,
         });
       } catch {}
+
       appRef.current = null;
       disposed = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
- 
-
   useEffect(() => {
     if (!appRef.current || !centerRef.current) return;
     layoutAll();
     primePool(current);
-    muteAllExcept(current);
+    muteAllExcept(current); // keep the pool muted except the current *if you ever want that*
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     current,
@@ -579,9 +539,7 @@ useEffect(() => {
     const buildPillar = (i) => {
       const r = pillarRectForIndex(i, cur);
       const sprite = PIXI.Sprite.from(videos[i].poster);
-      try {
-        sprite.texture.source.scaleMode = "nearest";
-      } catch {}
+      try { sprite.texture.source.scaleMode = "nearest"; } catch {}
       sprite.eventMode = "static";
       sprite.cursor = "pointer";
       sprite.alpha = 0.99;
@@ -626,6 +584,17 @@ useEffect(() => {
     for (let i = cur + 1; i < videos.length; i++) buildPillar(i);
   }
 
+  function layoutCenterHitbox() {
+    const hit = centerHitRef.current;
+    if (!hit) return;
+
+    const cRect = centerRectFor(current);
+    hit.style.left = `${Math.round(cRect.x)}px`;
+    hit.style.top = `${Math.round(cRect.y)}px`;
+    hit.style.width = `${Math.round(cRect.w)}px`;
+    hit.style.height = `${Math.round(cRect.h)}px`;
+  }
+
   function layoutAll() {
     const app = appRef.current;
     const center = centerRef.current;
@@ -636,7 +605,6 @@ useEffect(() => {
 
     const cRect = centerRectFor(current);
 
-    // ✅ FIX: prefer the ACTIVE video's intrinsic dimensions
     const rec = poolRef.current.get(current);
     const v = rec?.video;
 
@@ -653,6 +621,7 @@ useEffect(() => {
     center.scale.set(fit.scaleX, fit.scaleY);
 
     layoutRailFor(current);
+    layoutCenterHitbox(); // ✅ keep the DOM hitbox aligned too
   }
 
   /* ----------------------- Hover Intent (safe) ------------------------ */
@@ -687,27 +656,19 @@ useEffect(() => {
     poolRef.current.set(idx, rec);
 
     if (prefetchOnly) {
-      try {
-        await rec.video.play();
-        rec.video.pause();
-      } catch {}
-      try {
-        rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001);
-      } catch {}
+      try { await rec.video.play(); rec.video.pause(); } catch {}
+      try { rec.video.currentTime = Math.max(0, rec.video.currentTime - 0.001); } catch {}
     }
 
     const want = new Set([currentRef.current, idx]);
     for (let d = 1; d <= PREFETCH_RADIUS; d++) {
       if (currentRef.current - d >= 0) want.add(currentRef.current - d);
-      if (currentRef.current + d < videos.length)
-        want.add(currentRef.current + d);
+      if (currentRef.current + d < videos.length) want.add(currentRef.current + d);
     }
 
     for (const [k, r] of [...poolRef.current.entries()]) {
       if (!want.has(k)) {
-        try {
-          r.destroy?.();
-        } catch {}
+        try { r.destroy?.(); } catch {}
         poolRef.current.delete(k);
       }
     }
@@ -721,11 +682,13 @@ useEffect(() => {
       if (idx - d >= 0) wants.push(idx - d);
       if (idx + d < videos.length) wants.push(idx + d);
     }
+
     await Promise.all(
       wants.map((i) =>
         getVideoRecord(i, { prefetchOnly: i !== idx }).catch(() => {})
       )
     );
+
     setCenterTexture(idx, false);
   }
 
@@ -733,21 +696,19 @@ useEffect(() => {
     const center = centerRef.current;
     const rec = poolRef.current.get(idx);
     center.texture = rec?.texture || PIXI.Texture.from(videos[idx].poster);
-    try {
-      center.texture.source.scaleMode = "nearest";
-    } catch {}
+    try { center.texture.source.scaleMode = "nearest"; } catch {}
     if (!skipLayout) layoutAll();
   }
 
-  //check if in view - mute if not 
+  // If scrolled out of view: fade out audio + reset cursor state
   useEffect(() => {
-  if (inView) return;
-  const rec = poolRef.current.get(currentRef.current);
-  if (rec?.video) muteIfCurrent(rec.video);
-}, [inView]);
+    if (inView) return;
+    const rec = poolRef.current.get(currentRef.current);
+    if (rec?.video) muteIfCurrent(rec.video);
+    setIsAudible(false);
+  }, [inView]);
 
   /* --------------------------- Transition ----------------------------- */
-
 
   async function trySwitch(nextIdx) {
     if (animatingRef.current || nextIdx === currentRef.current) return;
@@ -763,9 +724,7 @@ useEffect(() => {
 
     const prevIdx = currentRef.current;
 
-    const incomingRecPromise = getVideoRecord(nextIdx, {
-      prefetchOnly: true,
-    }).catch(() => null);
+    const incomingRecPromise = getVideoRecord(nextIdx, { prefetchOnly: true }).catch(() => null);
     const currentRec = poolRef.current.get(prevIdx);
 
     const cRectNow = center.getBounds();
@@ -780,12 +739,7 @@ useEffect(() => {
     const incTexSrc = center.texture?.source;
     const incW = incTexSrc?.width || 16,
       incH = incTexSrc?.height || 9;
-    const fitFinal = fitContain(
-      incW,
-      incH,
-      Math.round(finalCRect.w),
-      Math.round(finalCRect.h)
-    );
+    const fitFinal = fitContain(incW, incH, Math.round(finalCRect.w), Math.round(finalCRect.h));
     const finalTarget = {
       x: Math.round(finalCRect.x + fitFinal.x),
       y: Math.round(finalCRect.y + fitFinal.y),
@@ -803,9 +757,7 @@ useEffect(() => {
     rail.cacheAsBitmap = true;
 
     const posterTex = PIXI.Texture.from(videos[nextIdx].poster);
-    try {
-      posterTex.source.scaleMode = "nearest";
-    } catch {}
+    try { posterTex.source.scaleMode = "nearest"; } catch {}
     const incomingSprite = new PIXI.Sprite(posterTex);
     incomingSprite.zIndex = 10;
     incomingSprite.x = Math.round(fromRect.x);
@@ -818,9 +770,7 @@ useEffect(() => {
       if (!rec) return;
       const swap = () => {
         incomingSprite.texture = rec.texture;
-        try {
-          incomingSprite.texture.source.scaleMode = "nearest";
-        } catch {}
+        try { incomingSprite.texture.source.scaleMode = "nearest"; } catch {}
       };
       const v = rec.video;
       if (v.readyState >= 2) swap();
@@ -834,19 +784,16 @@ useEffect(() => {
     });
 
     const outgoingSprite = new PIXI.Sprite(center.texture);
-    try {
-      outgoingSprite.texture.source.scaleMode = "nearest";
-    } catch {}
+    try { outgoingSprite.texture.source.scaleMode = "nearest"; } catch {}
     outgoingSprite.zIndex = 10;
     outgoingSprite.x = Math.round(cRectNow.x);
     outgoingSprite.y = Math.round(cRectNow.y);
     outgoingSprite.width = Math.round(cRectNow.width);
     outgoingSprite.height = Math.round(cRectNow.height);
+
     const startCols = Math.max(
       12,
-      Math.round(
-        (layoutModeRef.current === "h" ? cRectNow.width : cRectNow.height) / 28
-      )
+      Math.round((layoutModeRef.current === "h" ? cRectNow.width : cRectNow.height) / 28)
     );
     const outFilt = new PixelateColsFilter(
       startCols,
@@ -869,33 +816,22 @@ useEffect(() => {
       overwrite: "auto",
     });
 
-    tl.to(
-      incomingSprite,
-      { x: finalTarget.x, y: finalTarget.y, width: finalTarget.w, height: finalTarget.h },
-      0
-    );
-    tl.to(
-      outgoingSprite,
-      {
-        x: Math.round(toRectForOutgoing.x),
-        y: Math.round(toRectForOutgoing.y),
-        width: Math.round(toRectForOutgoing.w),
-        height: Math.round(toRectForOutgoing.h),
-      },
-      0
-    );
+    tl.to(incomingSprite, { x: finalTarget.x, y: finalTarget.y, width: finalTarget.w, height: finalTarget.h }, 0);
+    tl.to(outgoingSprite, {
+      x: Math.round(toRectForOutgoing.x),
+      y: Math.round(toRectForOutgoing.y),
+      width: Math.round(toRectForOutgoing.w),
+      height: Math.round(toRectForOutgoing.h),
+    }, 0);
     tl.to(outFilt.uniforms, { uCols: bandCols }, 0);
 
     tl.add(() => {
       const appInst = appRef.current;
       const ticker = appInst?.ticker;
-      try {
-        ticker?.stop();
-      } catch {}
+      try { ticker?.stop(); } catch {}
 
       setCenterTexture(nextIdx, true);
 
-      // Commit center to exact final box
       const rec = poolRef.current.get(nextIdx);
       const v = rec?.video;
       const texSrc = center.texture?.source;
@@ -915,24 +851,19 @@ useEffect(() => {
 
       rail.cacheAsBitmap = false;
 
-    const newRec = poolRef.current.get(nextIdx);
-if (newRec?.video) {
-  // 🔒 ALWAYS start new videos muted
-  newRec.video.muted = true;
-  newRec.video.volume = 0;
-}
+      const newRec = poolRef.current.get(nextIdx);
+      if (newRec?.video) {
+        // 🔒 ALWAYS start new videos muted
+        newRec.video.muted = true;
+        newRec.video.volume = 0;
+      }
+      ensurePlayWhenReady(newRec?.video);
 
-try {
-  newRec?.video?.play?.();
-} catch {}
+      // mute everything (safe + clear)
+      muteAll();
+      setIsAudible(false); // cursor resets because new one is muted
 
-ensurePlayWhenReady(newRec?.video);
-muteAllExcept(-1); // ← mute EVERYTHING, including the new one
-
-
-      try {
-        ticker?.start();
-      } catch {}
+      try { ticker?.start(); } catch {}
 
       setCurrent(nextIdx);
       currentRef.current = nextIdx;
@@ -941,36 +872,41 @@ muteAllExcept(-1); // ← mute EVERYTHING, including the new one
       animatingRef.current = false;
 
       prewarmAround(nextIdx);
+      layoutCenterHitbox();
     });
-
-    
   }
 
   /* ------------------------------------------------------------------- */
 
-return (
-  <div
-    className="videoP-root"
-    ref={containerRef}
-    style={{
-      cursor: isAudible
-        ? "var(--cursor-muted)"
-        : "var(--cursor-speaker)",
-    }}
-    onClick={(e) => {
-      // only left click
-      if (e.button !== 0) return;
+  return (
+    <div className="videoP-root" ref={containerRef} style={{ position: "relative" }}>
+      {/* ✅ Only this overlay toggles audio (center video area only) */}
+      <div
+        ref={centerHitRef}
+        className="videoP-centerHit"
+        style={{
+          position: "absolute",
+          zIndex: 50,
+          // cursor icon only when you're over the center region
+          cursor: isAudible ? "var(--cursor-muted)" : "var(--cursor-speaker)",
+          background: "transparent",
+          touchAction: "manipulation",
+        }}
+        onPointerDown={(e) => {
+          // Only primary mouse button / primary touch
+          if (e.pointerType === "mouse" && e.button !== 0) return;
 
-      const rec = poolRef.current.get(currentRef.current);
-      const v = rec?.video;
-      if (!v) return;
+          e.stopPropagation();
+          try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch {}
 
-      toggleVideoAudio(v);
-      setIsAudible(isCurrentAudible(v));
-    }}
-  />
-);
+          const rec = poolRef.current.get(currentRef.current);
+          const v = rec?.video;
+          if (!v) return;
 
-
-;
+          const nowAudible = toggleVideoAudio(v);
+          setIsAudible(nowAudible);
+        }}
+      />
+    </div>
+  );
 }

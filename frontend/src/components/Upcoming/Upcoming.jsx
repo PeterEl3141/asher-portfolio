@@ -201,40 +201,49 @@ useEffect(() => {
 
   /* ---------------- Render ---------------- */
   return (
-    <section className="upcoming-section" ref={sectionRef}>
-      <div ref={heroWordRef} className="upcoming-hero-word" aria-hidden>
-        UPCOMING
-      </div>
+  <section className="upcoming-section" ref={sectionRef}>
+    <div ref={heroWordRef} className="upcoming-hero-word" aria-hidden>
+      UPCOMING
+    </div>
 
-      <div className="upcoming-main">
-        <img
-          src="/images/smallgods.png"
-          alt="Upcoming — trailer artwork"
-          className="upcoming-main-img"
-        />
-      </div>
+    <div className="upcoming-main">
+      <img
+        src="/images/smallgods.png"
+        alt="Upcoming — trailer artwork"
+        className="upcoming-main-img"
+      />
+    </div>
 
-      <div className="upcoming-video-wrap">
-        <video
-          ref={videoRef}
-          className="upcoming-video"
-          muted
-          playsInline
-          style={{
-            cursor: isAudible
-              ? "var(--cursor-muted)"
-              : "var(--cursor-speaker)",
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
-            const v = videoRef.current;
-            if (!v) return;
+    <div
+      className="upcoming-video-wrap"
+      style={{
+        cursor: isAudible ? "var(--cursor-muted)" : "var(--cursor-speaker)",
+      }}
+      onPointerDown={(e) => {
+        // Only primary mouse button / primary touch
+        if (e.pointerType === "mouse" && e.button !== 0) return;
 
-            toggleVideoAudio(v);
-            setIsAudible(isCurrentAudible(v));
-          }}
-        />
-      </div>
-    </section>
-  );
+        const v = videoRef.current;
+        if (!v) return;
+
+        // Prevent this gesture from bubbling into other handlers (if any)
+        e.stopPropagation();
+
+        toggleVideoAudio(v);
+
+        // 🔑 Sync UI cursor with the real global audio state
+        setIsAudible(isCurrentAudible(v));
+      }}
+    >
+      <video
+        ref={videoRef}
+        className="upcoming-video"
+        muted
+        playsInline
+        // cursor is inherited from the wrap (you already have CSS for this)
+      />
+    </div>
+  </section>
+);
+
 }

@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useState } from "react";
 import HLSVideo from "../HLSVideo";
 import { useInView } from "../../hooks/useInView";
 import "./PosterClip.css";
-import { toggleVideoAudio, muteIfCurrent } from "../../utils/videoAudioController";
+import { toggleVideoAudio, muteIfCurrent, isCurrentAudible } from "../../utils/videoAudioController";
 
 export default function PosterClip({
   posterSrc,
@@ -70,38 +70,39 @@ export default function PosterClip({
   };
 
   return (
-    <section
-  ref={wrapRef}
-  className={`posterclip ${className}`}
-  
->
+  <section ref={wrapRef} className={`posterclip ${className}`}>
+    <div className="posterclip__posterWrap">
+      <img
+        className="posterclip__poster"
+        src={posterSrc}
+        alt=""
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
+    </div>
 
-      <div className="posterclip__posterWrap">
-        <img
-          className="posterclip__poster"
-          src={posterSrc}
-          alt=""
-          loading="eager"
-          fetchpriority="high"
-          decoding="async"
-        />
-      </div>
+    <div className="posterclip__gap" aria-hidden="true" />
 
-      <div className="posterclip__gap" aria-hidden="true" />
+    <div className="posterclip__videoWrap" style={{ ["--posterclip-gap"]: `${gapPx}px` }}>
+      <div
+        className="posterclip__videoHit"
+        style={{
+          cursor: isAudible ? "var(--cursor-muted)" : "var(--cursor-speaker)",
+        }}
+        onPointerDown={(e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
 
-      <div className="posterclip__videoWrap"
-          style={{
-        ["--posterclip-gap"]: `${gapPx}px`,
-        cursor: isAudible
-          ? "var(--cursor-muted)"
-          : "var(--cursor-speaker)",
-      }}
-      onClick={() => {
         const v = getVideoEl();
         if (!v) return;
-        const nowAudible = toggleVideoAudio(v);
-        setIsAudible(nowAudible);
-      }}>
+
+        toggleVideoAudio(v);
+
+        // 🔑 sync cursor with REAL audio state
+        setIsAudible(isCurrentAudible(v));
+      }}
+
+      >
         {hlsSrc ? (
           <HLSVideo
             src={hlsSrc}
@@ -124,6 +125,8 @@ export default function PosterClip({
           />
         )}
       </div>
-    </section>
-  );
+    </div>
+  </section>
+);
+
 }
