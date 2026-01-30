@@ -13,6 +13,8 @@
     width: 100%;
     padding: 0;
     text-align: inherit;
+   --cursor-speaker: url("/cursors/speaker-on.svg") 16 16, pointer;
+  --cursor-muted: url("/cursors/speaker-off.svg") 16 16, pointer;
   }
 
   html, body, #root {
@@ -31,6 +33,13 @@
     color: var(--fg);
     display: block;        /* override Vite flex centering */
   }
+
+  /* Prevent scroll while hero loader is active */
+body[data-hero-loading] {
+  overflow: hidden;
+  height: 100vh;
+  touch-action: none;
+}
 }
 
 @layer utilities {

@@ -5,6 +5,10 @@ import { Assets } from "pixi.js";
 import { gsap } from "gsap";
 import Hls from "hls.js";
 import "./VideoP.css";
+import { toggleVideoAudio, muteIfCurrent } from "../../utils/videoAudioController";
+import { useInView } from "../../hooks/useInView";
+import { isCurrentAudible } from "../../utils/videoAudioController";
+
 
 /* ------------------------------- Utils ------------------------------- */
 
@@ -153,6 +157,10 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}) {
     }
   };
 
+
+  
+
+
   await new Promise((resolve, reject) => {
     const ok = () => {
       el.addEventListener("timeupdate", onTimeupdate);
@@ -231,6 +239,8 @@ export default function VideoP({
   const [current, setCurrent] = useState(
     Math.min(Math.max(initialIndex, 0), Math.max(videos.length - 1, 0))
   );
+  const [isAudible, setIsAudible] = useState(false);
+
   const currentRef = useRef(current);
   useEffect(() => {
     currentRef.current = current;
@@ -250,6 +260,16 @@ export default function VideoP({
   const hoverIdxRef = useRef(null);
   const hoverCooldownUntilRef = useRef(0);
   const layoutTickRef = useRef(0);
+
+  const soundUnlockedRef = useRef(false);
+
+  const inView = useInView(containerRef, { threshold: 0.0 });
+
+
+  function getActiveVideo() {
+  const rec = poolRef.current.get(currentRef.current);
+  return rec?.video || null;
+}
 
   // ---- prefetch knobs ----
   const PREFETCH_RADIUS = isSafariLike() ? 1 : 3;
@@ -313,6 +333,21 @@ export default function VideoP({
       return t;
     });
   }, [videos]);
+
+
+  function muteAllExcept(activeIdx) {
+  for (const [idx, rec] of poolRef.current.entries()) {
+    if (!rec?.video) continue;
+    rec.video.muted = idx !== activeIdx;
+  }
+}
+
+//default to the unmute cursor when changing to a new video 
+useEffect(() => {
+  const v = getActiveVideo();
+  setIsAudible(!!(v && isCurrentAudible(v)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [current]);
 
   /* ----------------------------- Mount -------------------------------- */
 
@@ -426,10 +461,13 @@ export default function VideoP({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+ 
+
   useEffect(() => {
     if (!appRef.current || !centerRef.current) return;
     layoutAll();
     primePool(current);
+    muteAllExcept(current);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     current,
@@ -701,7 +739,15 @@ export default function VideoP({
     if (!skipLayout) layoutAll();
   }
 
+  //check if in view - mute if not 
+  useEffect(() => {
+  if (inView) return;
+  const rec = poolRef.current.get(currentRef.current);
+  if (rec?.video) muteIfCurrent(rec.video);
+}, [inView]);
+
   /* --------------------------- Transition ----------------------------- */
+
 
   async function trySwitch(nextIdx) {
     if (animatingRef.current || nextIdx === currentRef.current) return;
@@ -813,6 +859,7 @@ export default function VideoP({
     center.visible = false;
     try {
       currentRec?.video?.pause?.();
+      if (currentRec?.video) muteIfCurrent(currentRec.video);
     } catch {}
 
     const ease = "cubic-bezier(.22,1,.36,1)";
@@ -868,11 +915,20 @@ export default function VideoP({
 
       rail.cacheAsBitmap = false;
 
-      const newRec = poolRef.current.get(nextIdx);
-      try {
-        newRec?.video?.play?.();
-      } catch {}
-      ensurePlayWhenReady(newRec?.video);
+    const newRec = poolRef.current.get(nextIdx);
+if (newRec?.video) {
+  // 🔒 ALWAYS start new videos muted
+  newRec.video.muted = true;
+  newRec.video.volume = 0;
+}
+
+try {
+  newRec?.video?.play?.();
+} catch {}
+
+ensurePlayWhenReady(newRec?.video);
+muteAllExcept(-1); // ← mute EVERYTHING, including the new one
+
 
       try {
         ticker?.start();
@@ -886,9 +942,35 @@ export default function VideoP({
 
       prewarmAround(nextIdx);
     });
+
+    
   }
 
   /* ------------------------------------------------------------------- */
 
-  return <div className="videoP-root" ref={containerRef}></div>;
+return (
+  <div
+    className="videoP-root"
+    ref={containerRef}
+    style={{
+      cursor: isAudible
+        ? "var(--cursor-muted)"
+        : "var(--cursor-speaker)",
+    }}
+    onClick={(e) => {
+      // only left click
+      if (e.button !== 0) return;
+
+      const rec = poolRef.current.get(currentRef.current);
+      const v = rec?.video;
+      if (!v) return;
+
+      toggleVideoAudio(v);
+      setIsAudible(isCurrentAudible(v));
+    }}
+  />
+);
+
+
+;
 }

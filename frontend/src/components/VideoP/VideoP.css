@@ -47,3 +47,10 @@
 .videoP-canvas {
   touch-action: pan-y; /* allow vertical scroll gestures */
 }
+
+
+
+
+.videoP-root {
+  cursor: pointer;
+}

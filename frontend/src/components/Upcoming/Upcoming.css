@@ -135,3 +135,9 @@
     margin-bottom: 0;                 /* was 200px (creates extra black) */
   }
 }
+
+
+.upcoming-video-wrap,
+.upcoming-video-wrap video {
+  cursor: inherit;
+}

@@ -60,3 +60,10 @@
     /* No extra padding/offsets here; page background will show in the gap */
   }
 }
+
+
+
+.posterclip,
+.posterclip video {
+  cursor: inherit;
+}

@@ -1,6 +1,8 @@
 // src/components/HLSVideo.jsx
 import { useEffect, useRef } from "react";
 import Hls from "hls.js";
+import { toggleVideoAudio } from "../utils/videoAudioController";
+
 
 export default function HLSVideo({
   src,
@@ -9,6 +11,7 @@ export default function HLSVideo({
   muted = true,
   playsInline = true,
   loop = true,
+  hoverSound = false, 
   className = "",
   onReady,
 }) {
@@ -20,6 +23,7 @@ export default function HLSVideo({
   const lastCTRef = useRef(0);
   const vodDurationRef = useRef(NaN);
   const restartingRef = useRef(false);
+  const soundUnlockedRef = useRef(false);
 
   // ---------- INIT PIPELINE (ONLY when src changes / mount) ----------
   useEffect(() => {
@@ -207,5 +211,15 @@ export default function HLSVideo({
     }
   }, [active, autoPlay]);
 
-  return <video ref={ref} className={className} playsInline={playsInline} />;
+  return (
+  <video
+    ref={ref}
+    className={className}
+    playsInline={playsInline}
+    
+  />
+);
+
+
+;
 }

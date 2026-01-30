@@ -40,11 +40,28 @@ export default function HeroVideo({
   const showVideo = minDelayDone && (videoReady || timedOut);
 
  useEffect(() => {
-  // when showVideo is false, we're in the loader phase
-  document.body.toggleAttribute("data-hero-loading", !showVideo);
+  let scrollY = 0;
 
-  // when the loader finishes, refresh ScrollTrigger positions
-  if (showVideo) {
+  if (!showVideo) {
+    // LOCK SCROLL
+    scrollY = window.scrollY;
+
+    document.body.dataset.heroLoading = "true";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+  } else {
+    // UNLOCK SCROLL
+    const y = Math.abs(parseInt(document.body.style.top || "0", 10));
+
+    document.body.removeAttribute("data-hero-loading");
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.width = "";
+
+    window.scrollTo(0, y);
+
+    // refresh GSAP / ScrollTrigger after layout settles
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         try {
@@ -56,8 +73,12 @@ export default function HeroVideo({
 
   return () => {
     document.body.removeAttribute("data-hero-loading");
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.width = "";
   };
 }, [showVideo]);
+
 
 
   const R = 48;
