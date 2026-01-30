@@ -100,3 +100,14 @@
   pointer-events: none;
   z-index: 0;
 }
+
+
+
+
+/* Prevent scroll chaining on mobile */
+body[data-hero-loading] {
+  overflow: hidden;
+  height: 100vh;
+  overscroll-behavior: none;
+  touch-action: none;
+}

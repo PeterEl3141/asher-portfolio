@@ -17,6 +17,11 @@ export default function HeroVideo({
 
   const revealFadeMs = 700;
 
+  const preventTouchRef = useRef(null);
+  if (!preventTouchRef.current) {
+    preventTouchRef.current = (e) => e.preventDefault();
+  }
+
   // enforce the minimum loading ring + max extra wait
   useEffect(() => {
     const t = setTimeout(() => setMinDelayDone(true), delayMs);
@@ -40,44 +45,60 @@ export default function HeroVideo({
   const showVideo = minDelayDone && (videoReady || timedOut);
 
  useEffect(() => {
+  const preventTouch = preventTouchRef.current;
   let scrollY = 0;
 
   if (!showVideo) {
-    // LOCK SCROLL
     scrollY = window.scrollY;
 
     document.body.dataset.heroLoading = "true";
     document.body.style.position = "fixed";
     document.body.style.top = `-${scrollY}px`;
     document.body.style.width = "100%";
+
+    document.addEventListener("touchmove", preventTouch, { passive: false });
   } else {
-    // UNLOCK SCROLL
-    const y = Math.abs(parseInt(document.body.style.top || "0", 10));
+  const y = Math.abs(parseInt(document.body.style.top || "0", 10));
 
-    document.body.removeAttribute("data-hero-loading");
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.width = "";
+  // UNLOCK SCROLL (belt + suspenders)
+  delete document.body.dataset.heroLoading;
+  document.body.removeAttribute("data-hero-loading");
 
-    window.scrollTo(0, y);
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.width = "";
 
-    // refresh GSAP / ScrollTrigger after layout settles
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        try {
-          window.ScrollTrigger?.refresh?.();
-        } catch {}
-      })
-    );
-  }
+  document.removeEventListener("touchmove", preventTouch);
+
+  window.scrollTo(0, y);
+
+  // ✅ force listeners (your parallax) to recompute immediately
+  requestAnimationFrame(() => {
+    window.dispatchEvent(new Event("scroll"));
+    window.dispatchEvent(new Event("resize"));
+  });
+
+  // Refresh GSAP / ScrollTrigger after layout settles
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      try {
+        window.ScrollTrigger?.refresh?.();
+      } catch {}
+    })
+  );
+}
+
 
   return () => {
+    delete document.body.dataset.heroLoading;
     document.body.removeAttribute("data-hero-loading");
     document.body.style.position = "";
     document.body.style.top = "";
     document.body.style.width = "";
+    document.removeEventListener("touchmove", preventTouch);
   };
 }, [showVideo]);
+
 
 
 

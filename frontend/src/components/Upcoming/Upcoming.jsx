@@ -40,36 +40,71 @@ export default function Upcoming() {
   }, [active]);
 
   /* ---------------- Parallax word ---------------- */
-  useEffect(() => {
-    const section = sectionRef.current;
-    const word = heroWordRef.current;
-    if (!section || !word) return;
+  /* ---------------- Parallax word ---------------- */
+useEffect(() => {
+  const section = sectionRef.current;
+  const word = heroWordRef.current;
+  if (!section || !word) return;
 
-    const factor = 0.5;
-    let ticking = false;
+  let ticking = false;
 
-    const update = () => {
-      const rect = section.getBoundingClientRect();
-      if (rect.bottom <= 0 || rect.top >= window.innerHeight) return;
-      word.style.transform = `translate3d(-50%, ${-rect.top * factor}px, 0)`;
+  const readVars = () => {
+    const styles = getComputedStyle(section);
+    const factor =
+      parseFloat(styles.getPropertyValue("--upcoming-parallax-factor")) || 0.5;
+    const baseY =
+      parseFloat(styles.getPropertyValue("--upcoming-word-base-y")) || 0;
+
+    return { factor, baseY };
+  };
+
+  let { factor, baseY } = readVars();
+
+  const update = () => {
+    const rect = section.getBoundingClientRect();
+
+    // Always clear ticking, even if offscreen
+    if (rect.bottom <= 0 || rect.top >= window.innerHeight) {
       ticking = false;
-    };
+      return;
+    }
 
-    const onScroll = () => {
-      if (!ticking) {
-        ticking = true;
-        requestAnimationFrame(update);
-      }
-    };
+    // ✅ Reduced motion: factor is smaller on mobile
+    // ✅ Start lower: baseY comes from CSS
+    const y = baseY + (-rect.top * factor);
 
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
-  }, []);
+    // Optional safety clamp so it can’t fly too far upward
+    // (tweak -160 / 500 if you want)
+    const clampedY = Math.max(-160, Math.min(y, 500));
+
+    word.style.transform = `translate3d(-50%, ${clampedY}px, 0)`;
+    ticking = false;
+  };
+
+  const onScroll = () => {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(update);
+    }
+  };
+
+  update();
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  document.addEventListener("scroll", onScroll, { passive: true, capture: true });
+
+  window.addEventListener("resize", () => {
+    // re-read vars on resize so breakpoint changes update factor/baseY
+    ({ factor, baseY } = readVars());
+    onScroll();
+  });
+
+  return () => {
+    window.removeEventListener("scroll", onScroll);
+    document.removeEventListener("scroll", onScroll, { capture: true });
+    window.removeEventListener("resize", onScroll);
+  };
+}, []);
 
   /* ---------------- Preload HLS when active ---------------- */
   useEffect(() => {

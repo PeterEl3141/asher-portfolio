@@ -20,3 +20,19 @@
   }
   
  
+
+@media (max-width: 600px) {
+  .film-awards-black {
+    flex-wrap: wrap;                /* ✅ allow wrapping */
+    justify-content: center;
+    gap: 1.5rem;                    /* ✅ reduce gap */
+    min-height: auto;               /* ✅ remove 70vh */
+    padding-top: 120px;             /* tighten vertical space */
+    padding-bottom: 140px;
+  }
+
+  .award-black {
+    height: clamp(48px, 14vw, 72px); /* smaller, phone-appropriate */
+    max-width: 40vw;                /* prevent giant logos */
+  }
+}

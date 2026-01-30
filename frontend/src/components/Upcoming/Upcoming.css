@@ -16,6 +16,8 @@
   background: black;
   color: var(--upcoming-fg, #000000);
   font-family: Gruppo;
+    --upcoming-parallax-factor: 0.5;  /* how fast it moves */
+  --upcoming-word-base-y: 0;        /* pushes starting position down (+) or up (-) */
 
   /* no margin-top here; prevents collapsed-margin “black bar” */
 }
@@ -99,10 +101,6 @@
   }
 }
 
-
-
-
-
 /* Mobile tightening */
 @media (max-width: 600px) {
   .upcoming-section {
@@ -112,12 +110,23 @@
     padding-right: 16px;
     padding-bottom: 80px;             /* reduce tail space */
     margin-bottom: 80px;              /* was 200px */
+     --upcoming-parallax-factor: 0.3;  /* ✅ much less travel on phones */
+    --upcoming-word-base-y: 60;        /* ✅ start lower */
   }
 
   .upcoming-hero-word {
     top: 120px;                       /* was 250px */
+    padding-top: 40px;                /* was 80px; reduce extra push on mobile */
+
     -webkit-text-stroke: 5px rgba(107, 107, 107, 0.5); /* lighter stroke for small */
-    font-size: clamp(56px, 18vw, 140px);
+
+    /* ✅ Make "UPCOMING" fit on small screens */
+    letter-spacing: 0.04em;           /* was 0.08em */
+    font-size: clamp(44px, calc((100vw - 32px) / 8), 110px);
+
+    /* optional extra safety if stroke/spacing still nudges it off-screen */
+    transform: translate3d(-50%, 0, 0) scale(0.95);
+    transform-origin: center;
   }
 
   .upcoming-main {
@@ -134,10 +143,4 @@
   .upcoming-video {
     margin-bottom: 0;                 /* was 200px (creates extra black) */
   }
-}
-
-
-.upcoming-video-wrap,
-.upcoming-video-wrap video {
-  cursor: inherit;
 }

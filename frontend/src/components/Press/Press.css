@@ -160,8 +160,13 @@
     aspect-ratio: 16 / 11;            /* slightly taller looks better on phone */
   }
 
-  .press-thumbs {
-    grid-auto-columns: minmax(64px, 1fr);
+    .press-thumbs {
+    max-width: 100%;
+    width: 100%;
+
+    /* switch from single-row strip to wrapped grid */
+    grid-auto-flow: unset;
+    grid-template-columns: repeat(3, minmax(0, 1fr)); /* 3 per row */
     gap: 10px;
   }
 }
