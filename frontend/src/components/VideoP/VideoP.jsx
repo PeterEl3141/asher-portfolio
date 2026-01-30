@@ -76,6 +76,29 @@ function fitContain(texW, texH, boxW, boxH) {
 /** HLS-backed <video> → Pixi Texture (robust looping with hls.js preferred) */
 async function createStreamVideo(id, { autoplay = true, muted = true } = {}) {
   const el = document.createElement("video");
+
+  // ✅ iOS reliability: keep the media element in the DOM (hidden)
+let host = document.getElementById("pixi-video-host");
+if (!host) {
+  host = document.createElement("div");
+  host.id = "pixi-video-host";
+  host.style.position = "fixed";
+  host.style.left = "-9999px";
+  host.style.top = "0";
+  host.style.width = "1px";
+  host.style.height = "1px";
+  host.style.opacity = "0";
+  host.style.pointerEvents = "none";
+  host.style.overflow = "hidden";
+  document.body.appendChild(host);
+  }
+  host.appendChild(el);
+
+  // extra iOS attributes (helps)
+  el.setAttribute("playsinline", "");
+  el.setAttribute("webkit-playsinline", "");
+  el.setAttribute("muted", "");
+
   el.playsInline = true;
   el.muted = muted;
   el.autoplay = autoplay;
@@ -192,6 +215,9 @@ async function createStreamVideo(id, { autoplay = true, muted = true } = {}) {
     try { hls?.destroy?.(); } catch {}
     try { el.pause?.(); } catch {}
     try { el.src = ""; } catch {}
+    try {
+    el.parentNode?.removeChild(el);
+} catch {}
   };
 
   return { video: el, texture, destroy, hls };
