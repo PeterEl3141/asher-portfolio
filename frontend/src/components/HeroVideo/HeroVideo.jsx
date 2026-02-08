@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "./HeroVideo.css";
 
 export default function HeroVideo({
-  delayMs = 5000,
+  delayMs = 7000,
   maxExtraWaitMs = 4000,
 }) {
   const wrapRef = useRef(null);
