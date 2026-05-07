@@ -60,13 +60,8 @@ useEffect(() => {
       <div className="profile-right">
         <div ref={textRef} className={`text-reveal ${show ? "is-inview" : ""}`}>
           <div className="text-reveal__inner">
-            <p>Asher Rosen is a director, cinematographer, and editor based in London and Kisoro. In 2021, 
-              Asher directed his debut short film, MEAT, produced by Scala Productions. Meat won multiple awards, 
-              culminating in a selection for the César Académie’s ‘Golden Nights’ Programme. Asher’s second short film 
-              THE RABBI’S SON (2022) won the Pears Short Film Fund, before playing at a number of BAFTA/Oscar qualifying festivals.</p>
-            <p>In 2023, Asher began production on his debut feature film, SMALL GODS. Small Gods received 9 AMAA nominations, winning for 
-              Best Lead Actress, and had its UK Premiere at BIFA-Qualifying Cornwall Film Festival, where it won Best Feature Film. It is 
-              currently playing further festivals and will be released theatrically by Sovereign Films in 2026.</p>
+            <p>Asher Rosen is a director, cinematographer, and editor based in London. In 2021, Asher directed his debut short film, MEAT, produced by Scala Productions. Meat won multiple awards, culminating in a selection for the César Académie’s ‘Golden Nights’ Programme. Asher’s second short film THE RABBI’S SON (2022) won the Pears Short Film Fund, playing BAFTA/Oscar qualifying festivals such as Rhode Island and Athens.</p>
+            <p>In 2024, Asher began production on his debut feature film, SMALL GODS, which premiered at the Beijing International Film Festival, winning Best Director in the Future Forward section. Subsequently, Small Gods received 9 AMAA nominations, with newcomer Chimpaye Florence Mariserena winning Best Lead Actress. It is currently playing further festivals and will be released theatrically by Sovereign Films in 2026.</p>
           </div>
         </div>
       </div>
